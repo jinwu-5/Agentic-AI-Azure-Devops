@@ -1,18 +1,16 @@
 """
-STEP 2: Orchestrator Agent
-The brain of the system - analyzes stories, creates execution plans, coordinates other agents
+STEP 2: Orchestrator Agent - With improved file organization
 """
 
 from core import BaseAgent, WorkflowContext, AgentState
+from typing import Dict, Any, List
 import json
 import html
 import re
 
 
 class OrchestratorAgent(BaseAgent):
-    """
-    Orchestrator Agent - Coordinates the entire workflow
-    """
+    """Orchestrator Agent - Coordinates the entire workflow"""
     
     def __init__(self, ai_client, deployment_name, mcp_manager):
         super().__init__("Orchestrator", ai_client, deployment_name)
@@ -44,11 +42,8 @@ class OrchestratorAgent(BaseAgent):
         """Convert HTML to plain text"""
         if not html_text:
             return ""
-        # Unescape HTML entities
         text = html.unescape(html_text)
-        # Remove HTML tags
         text = re.sub(r'<[^>]+>', ' ', text)
-        # Clean up whitespace
         text = re.sub(r'\s+', ' ', text).strip()
         return text
     
@@ -125,13 +120,7 @@ class OrchestratorAgent(BaseAgent):
             
             self.log(context, "Failed to parse work item", "Unexpected data structure", False)
             return False
-
-        except json.JSONDecodeError as e:
-            self.log(context, "Failed to parse work item JSON", str(e), False)
-            return False
-        except ValueError:
-            self.log(context, "Invalid work item ID", f"Must be numeric: {context.work_item_id}", False)
-            return False
+            
         except Exception as e:
             self.log(context, "Failed to fetch work item", str(e), False)
             import traceback
@@ -165,7 +154,7 @@ Provide analysis in JSON:
     "complexity": "simple|medium|complex",
     "risks": ["risk1"],
     "recommended_approach": "Implementation strategy",
-    "estimated_files": ["file1.css", "file2.js"]
+    "estimated_files": ["src/styles/theme.css", "src/utils/themeToggle.js"]
 }}"""
 
         try:
@@ -192,7 +181,7 @@ Provide analysis in JSON:
             return False
     
     async def create_execution_plan(self, context: WorkflowContext) -> bool:
-        """Create detailed execution plan"""
+        """Create detailed execution plan with proper file organization"""
         self.log(context, "Creating execution plan", "Using AI planning")
         context.current_state = AgentState.PLANNING
         
@@ -202,11 +191,11 @@ Provide analysis in JSON:
 
 Create actionable plans for specialized AI agents (DevOps, Code, Test).
 
-Include:
-1. Git branching
-2. File structure
-3. Implementation steps
-4. Testing strategy"""
+IMPORTANT - File Organization:
+- CSS files go in: src/styles/
+- JavaScript/React files go in: src/components/ or src/utils/
+- Test files go in: tests/
+- Always use proper directory structure"""
 
         user_prompt = f"""Create plan for:
 
@@ -216,7 +205,7 @@ Description: {context.work_item_description[:500]}...
 Analysis:
 {json.dumps(analysis, indent=2)}
 
-Provide plan in JSON:
+Provide plan in JSON with PROPER FILE PATHS:
 {{
     "branch_name": "feature/story-{context.work_item_id}",
     "implementation_steps": [
@@ -224,13 +213,13 @@ Provide plan in JSON:
             "step": 1,
             "description": "What to do",
             "agent": "CodeAgent",
-            "files_to_create": ["theme.css"],
+            "files_to_create": ["src/styles/theme.css"],
             "validation": "How to verify"
         }}
     ],
     "testing_strategy": {{
         "unit_tests": ["test"],
-        "test_files": ["test_theme.js"]
+        "test_files": ["tests/test_theme.js"]
     }},
     "pr_description": "PR description"
 }}"""
@@ -257,7 +246,6 @@ Provide plan in JSON:
             print(f"Branch: {context.branch_name}")
             print(f"Total Steps: {len(steps)}\n")
             
-            # Show ALL steps instead of truncating
             for step in steps:
                 print(f"  {step.get('step')}. {step.get('description')}")
                 print(f"     Agent: {step.get('agent')}")

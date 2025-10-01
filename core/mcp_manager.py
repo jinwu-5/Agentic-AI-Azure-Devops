@@ -9,6 +9,7 @@ class MCPConnectionManager:
     def __init__(self):
         self.connections: Dict[str, Dict] = {}
         self.request_ids: Dict[str, int] = {}
+        self.base_paths: Dict[str, str] = {}  # Track base paths
     
     async def start_azure_devops_mcp(self, org_url: str, pat: str, project: str) -> bool:
         """Start Azure DevOps MCP server"""
@@ -43,11 +44,18 @@ class MCPConnectionManager:
     
     async def start_filesystem_mcp(self, base_path: str) -> bool:
         """Start Filesystem MCP server"""
-        print("Starting Filesystem MCP server...")
+        print(f"Starting Filesystem MCP server for: {base_path}")
         
         try:
+            # Make sure path exists and is absolute
+            abs_base_path = os.path.abspath(base_path)
+            
+            if not os.path.exists(abs_base_path):
+                print(f"✗ Path does not exist: {abs_base_path}")
+                return False
+            
             process = await asyncio.create_subprocess_exec(
-                "npx", "-y", "@modelcontextprotocol/server-filesystem", base_path,
+                "npx", "-y", "@modelcontextprotocol/server-filesystem", abs_base_path,
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
@@ -59,9 +67,10 @@ class MCPConnectionManager:
                 "stdout": process.stdout
             }
             self.request_ids["filesystem"] = 1
+            self.base_paths["filesystem"] = abs_base_path
             
             await self._init_mcp("filesystem")
-            print("✓ Filesystem MCP ready")
+            print(f"✓ Filesystem MCP ready (base: {abs_base_path})")
             return True
         except Exception as e:
             print(f"✗ Filesystem MCP failed: {e}")

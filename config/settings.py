@@ -18,8 +18,8 @@ class SystemConfig:
         self.pat_token = os.getenv("AZURE_DEVOPS_PAT")
         self.default_project = os.getenv("AZURE_DEVOPS_PROJECT")
         
-        # Paths
-        self.repository_path = os.getcwd()
+        # Paths - Now reads from .env with fallback to current directory
+        self.repository_path = os.getenv("REPOSITORY_PATH", os.getcwd())
         self.rag_persist_directory = os.path.join(self.repository_path, ".rag_db")
         
         self._validate()
@@ -37,4 +37,5 @@ class SystemConfig:
         if missing:
             raise ValueError(f"Missing required environment variables: {missing}")
         
-        print("✅ Configuration validated")
+        print("✓ Configuration validated")
+        print(f"✓ Repository path: {self.repository_path}")

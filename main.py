@@ -2,7 +2,8 @@ import asyncio
 from openai import AzureOpenAI
 from config import SystemConfig
 from core import MCPConnectionManager, WorkflowContext
-from agents import OrchestratorAgent, DevOpsAgent
+from agents import OrchestratorAgent, DevOpsAgent, CodeAgent
+from services import CodebaseRAG
 
 class MultiAgentSystem:
     """Main multi-agent orchestration system"""
@@ -15,6 +16,13 @@ class MultiAgentSystem:
             azure_endpoint=config.azure_endpoint,
             api_key=config.azure_key,
             api_version=config.api_version
+        )
+        
+        # Initialize RAG first
+        self.rag = CodebaseRAG(
+            config.repository_path,
+            self.ai_client,
+            config.rag_persist_directory
         )
         
         # Initialize agents
@@ -30,11 +38,19 @@ class MultiAgentSystem:
             self.mcp_manager,
             config.repository_path
         )
+        
+        self.code_agent = CodeAgent(
+            self.ai_client,
+            config.deployment_name,
+            self.mcp_manager,
+            self.rag,
+            config.repository_path  # Pass repository path
+        )
     
     async def initialize(self):
         """Initialize the system"""
         print("\n" + "="*60)
-        print("MULTI-AGENT AZURE DEVOPS SYSTEM - STEP 3")
+        print("MULTI-AGENT SYSTEM - FULL WORKFLOW TEST")
         print("="*60 + "\n")
         
         await self.mcp_manager.start_azure_devops_mcp(
@@ -47,57 +63,57 @@ class MultiAgentSystem:
             self.config.repository_path
         )
         
-        print("\n✓ System initialized")
-        print("✓ Orchestrator Agent ready")
-        print("✓ DevOps Agent ready")
+        print("Indexing codebase...")
+        self.rag.index_repository()
+        
+        print("\n✓ All agents initialized")
     
-    async def test_step3(self, work_item_id: str):
-        """Test Steps 2 & 3 together"""
+    async def implement_work_item(self, work_item_id: str):
+        """Full workflow"""
         print(f"\n{'='*60}")
-        print(f"TESTING ORCHESTRATOR + DEVOPS AGENT")
+        print(f"IMPLEMENTING WORK ITEM {work_item_id}")
         print('='*60 + '\n')
         
-        # Create workflow context
         context = WorkflowContext()
         context.work_item_id = work_item_id
         context.repository_path = self.config.repository_path
         
-        # Step 1: Orchestrator analyzes and plans
-        print("Step 1: Orchestrator Analysis & Planning")
+        # Step 1: Orchestrator
+        print("STEP 1: Orchestrator")
         print("-" * 40)
-        success = await self.orchestrator.execute(context)
-        
-        if not success:
-            print("\n✗ Orchestration failed")
+        if not await self.orchestrator.execute(context):
             return context
         
-        # Step 2: DevOps Agent creates branch
-        print("\nStep 2: DevOps Agent - Create Feature Branch")
+        # Step 2: DevOps creates branch
+        print("\nSTEP 2: DevOps Agent")
         print("-" * 40)
-        success = await self.devops_agent.create_feature_branch(context)
+        if not await self.devops_agent.create_feature_branch(context):
+            return context
         
-        if success:
-            print(f"✓ Created and checked out branch: {context.branch_name}")
-            
-            # Show repo status
-            status = self.devops_agent.get_repo_status()
-            print(f"  Current branch: {status['branch']}")
-            print(f"  Working tree clean: {not status['is_dirty']}")
-        else:
-            print("✗ Branch creation failed")
+        # Step 3: Code Agent (first 2 steps)
+        print("\nSTEP 3: Code Agent")
+        print("-" * 40)
+        plan = context.execution_plan.get("implementation", {})
+        steps = plan.get("implementation_steps", [])
         
-        # Display results
+        code_steps = [s for s in steps if s.get("agent") == "CodeAgent"][:2]
+        
+        for step in code_steps:
+            print(f"\n  Step {step.get('step')}...")
+            if not await self.code_agent.execute_step(context, step):
+                print(f"  ✗ Failed")
+                break
+        
+        # Verify files
         print(f"\n{'='*60}")
-        print("TEST RESULTS")
+        print("VERIFICATION")
         print('='*60)
-        print(f"Work Item: {context.work_item_title}")
-        print(f"Branch: {context.branch_name}")
-        print(f"Acceptance Criteria: {len(context.acceptance_criteria)}")
-        print(f"\nAgent Actions: {len(context.agent_history)}")
-        for log in context.agent_history[-5:]:
-            status = "✓" if log["success"] else "✗"
-            print(f"  {status} [{log['agent']}] {log['action']}")
-        print('='*60 + '\n')
+        import os
+        for file_path in context.implementation_files.keys():
+            full_path = os.path.join(self.config.repository_path, file_path)
+            exists = os.path.exists(full_path)
+            status = "✓" if exists else "✗"
+            print(f"{status} {file_path}: {'EXISTS' if exists else 'NOT FOUND'}")
         
         return context
     
@@ -113,16 +129,9 @@ async def main():
         system = MultiAgentSystem(config)
         await system.initialize()
         
-        # Test with work item 9
-        context = await system.test_step3("9")
+        context = await system.implement_work_item("9")
         
-        print("\n✓ Step 3 Complete!")
-        print("\nNext Steps:")
-        print("  Step 4: Implement RAG System")
-        print("  Step 5: Implement Code Agent")
-        print("  Step 6: Implement Test Agent")
-        print("  Step 7: Build LangGraph Workflow")
-        
+        print("\n✓ Test complete!")
         print("\n[Press Ctrl+C to exit]")
         await asyncio.Event().wait()
         
