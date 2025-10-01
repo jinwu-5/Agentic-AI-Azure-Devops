@@ -1,5 +1,6 @@
 from .orchestrator import OrchestratorAgent
 from .devops_agent import DevOpsAgent
 from .code_agent import CodeAgent
+from .test_agent import TestAgent
 
-__all__ = ['OrchestratorAgent', 'DevOpsAgent', 'CodeAgent']
+__all__ = ['OrchestratorAgent', 'DevOpsAgent', 'CodeAgent', 'TestAgent']
