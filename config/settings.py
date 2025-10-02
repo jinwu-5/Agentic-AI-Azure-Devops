@@ -12,6 +12,7 @@ class SystemConfig:
         self.azure_key = os.getenv("AZURE_AI_KEY")
         self.deployment_name = os.getenv("AZURE_AI_DEPLOYMENT")
         self.api_version = os.getenv("AZURE_API_VERSION")
+        self.embedding_deployment_name = os.getenv("AZURE_AI_EMBEDDING_DEPLOYMENT")
         
         # Azure DevOps
         self.organization_url = os.getenv("AZURE_DEVOPS_ORG_URL")
@@ -29,6 +30,7 @@ class SystemConfig:
         required = {
             "AZURE_AI_ENDPOINT": self.azure_endpoint,
             "AZURE_AI_KEY": self.azure_key,
+            "AZURE_AI_EMBEDDING_DEPLOYMENT": self.embedding_deployment_name,
             "AZURE_DEVOPS_ORG_URL": self.organization_url,
             "AZURE_DEVOPS_PAT": self.pat_token
         }
@@ -39,3 +41,4 @@ class SystemConfig:
         
         print("✓ Configuration validated")
         print(f"✓ Repository path: {self.repository_path}")
+        print(f"✓ Embedding deployment: {self.embedding_deployment_name}")

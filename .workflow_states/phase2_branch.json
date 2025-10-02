@@ -1,23 +1,19 @@
 {
-  "saved_at": "2025-09-30T20:55:23.909518",
+  "saved_at": "2025-10-01T22:36:56.900051",
   "work_item": {
     "id": "9",
     "title": "Dark/Light Theme Implementation",
-    "description": "\ud83d\udea9 AC Addressed (Required) Implement dark/light theme support Redesign query interface with modern, clean aesthetics \ud83d\udca1 What do you want to accomplish? (Required) Develop a comprehensive theming system using CSS custom properties that supports both dark and light themes with proper contrast ratios meeting WCAG accessibility standards. Implement intelligent theme detection that respects user's system preference on first visit, with a toggle control for manual switching and persistent storage of user preference across sessions. Create smooth theme transition animations and ensure all UI components, including syntax highlighting and data visualizations, properly adapt to both theme variants. \ud83d\udccb Testability Considerations (Required) Visual testing for all components in both dark and light themes Accessibility testing for contrast ratios in both themes (WCAG 2.1 AA compliance) Browser testing for CSS custom property support and fallbacks User preference persistence testing across browser sessions Theme transition animation performance testing Integration testing with existing component library \u2699 Implementation (Optional) \u270b Technical Dependencies CSS custom properties support in target browsers Component library theming architecture User preference storage mechanism (localStorage/backend) \ud83d\udee0\ufe0f Engineering Work To Be Implemented CSS custom property-based theming system Theme toggle component with state management Dark theme color palette design with accessibility compliance Theme-aware syntax highlighting for query editor Theme transition animations and performance optimization System preference detection and user preference persistence \u26a0 Risks & Mitigations Risk: Theme switching may cause visual glitches or performance issues during transitions Mitigation 1: Implement CSS transitions carefully to avoid layout shifts Mitigation 2: Add option to disable animations for users with motion sensitivity Risk: Third-party components may not support custom theming Mitigation 1: Create theme adaptation layer for external components Mitigation 2: Select theme-compatible libraries or build custom alternatives",
+    "description": "\ud83d\udea9 AC Addressed (Required) Introduce light/dark theme selection entirely within the existing Python-rendered web UI (presentation/web_ui.py and helpers). Ensure query syntax highlighting and result panels remain legible under both themes. Persist the user\u2019s theme choice across requests within the active session (no browser-only storage). \ud83d\udca1 What do you want to accomplish? (Required) Develop a theme system driven by Python: define colour palettes as backend constants/config, inject them into the current templates, and expose a server-side toggle. On first visit, respect the user\u2019s preferred colour scheme when available (e.g., via request hints or explicit query parameter) and fall back to light. \ud83d\udccb Testability Considerations (Required) Unit tests for the theme resolver helper (default, system hint, manual override).",
     "acceptance_criteria": [
-      "Visual tests confirm all UI components render correctly in both dark and light themes",
-      "Accessibility tests verify color contrast ratios meet WCAG 2.1 AA standards in both themes",
-      "Browser tests confirm CSS custom properties are supported or appropriate fallbacks are applied",
-      "User preference for theme is persisted and restored correctly across browser sessions",
-      "Theme toggle control functions correctly allowing manual switching",
-      "Theme detection correctly applies system preference on first visit",
-      "Theme transition animations run smoothly without layout shifts or performance degradation",
-      "Option exists to disable animations for users with motion sensitivity",
-      "Third-party components adapt correctly to theme changes or are replaced with compatible alternatives"
+      "User can toggle between light and dark themes via a server-side toggle exposed in the UI.",
+      "Theme selection persists across multiple requests within the same session without using browser-only storage mechanisms like localStorage or cookies.",
+      "On first visit, if user preference is indicated via request headers or query parameters, the UI respects and applies that theme; otherwise, defaults to light theme.",
+      "Query syntax highlighting and result panels are clearly legible and visually appropriate in both themes.",
+      "Unit tests exist and pass for the theme resolver helper, validating default theme, system preference detection, and manual override scenarios."
     ]
   },
   "git": {
-    "branch_name": "feature/story-9",
+    "branch_name": "feature/dark-light-theme-toggle",
     "repository_path": "/Users/jinwu/Projects/DB-Agent"
   },
   "execution_plan": {
@@ -31,134 +27,120 @@
       "story_points": null
     },
     "analysis": {
-      "summary": "Implement a comprehensive dark/light theming system with accessibility compliance, intelligent theme detection, user preference persistence, smooth transitions, and full UI component adaptation including syntax highlighting and data visualizations.",
+      "summary": "Implement a backend-driven light/dark theme toggle within the existing Python-rendered web UI, ensuring UI elements remain legible, persisting user choice in session, and respecting user preference on first visit.",
       "technical_requirements": [
-        "Develop theming system using CSS custom properties supporting dark and light themes",
-        "Ensure color contrast ratios meet WCAG 2.1 AA accessibility standards",
-        "Implement intelligent theme detection respecting user's system preference on first visit",
-        "Provide toggle control for manual theme switching",
-        "Persist user theme preference across browser sessions",
-        "Create smooth theme transition animations with performance optimization",
-        "Ensure all UI components including syntax highlighting and data visualizations adapt to theme changes",
-        "Support browser compatibility for CSS custom properties with fallbacks",
-        "Integrate with existing component library theming architecture"
+        "Define color palettes for light and dark themes as Python backend constants or configuration.",
+        "Inject theme colors into existing templates rendered by presentation/web_ui.py and helpers.",
+        "Implement server-side toggle to switch themes during active session without relying on browser-only storage.",
+        "Persist user theme choice across requests within the active session (e.g., server-side session storage).",
+        "On first visit, detect and respect user preferred color scheme via request hints or explicit query parameter, defaulting to light theme if unavailable.",
+        "Ensure query syntax highlighting and result panels remain legible and visually consistent under both themes.",
+        "Develop unit tests for the theme resolver helper covering default behavior, system preference detection, and manual override."
       ],
       "acceptance_criteria": [
-        "Visual tests confirm all UI components render correctly in both dark and light themes",
-        "Accessibility tests verify color contrast ratios meet WCAG 2.1 AA standards in both themes",
-        "Browser tests confirm CSS custom properties are supported or appropriate fallbacks are applied",
-        "User preference for theme is persisted and restored correctly across browser sessions",
-        "Theme toggle control functions correctly allowing manual switching",
-        "Theme detection correctly applies system preference on first visit",
-        "Theme transition animations run smoothly without layout shifts or performance degradation",
-        "Option exists to disable animations for users with motion sensitivity",
-        "Third-party components adapt correctly to theme changes or are replaced with compatible alternatives"
+        "User can toggle between light and dark themes via a server-side toggle exposed in the UI.",
+        "Theme selection persists across multiple requests within the same session without using browser-only storage mechanisms like localStorage or cookies.",
+        "On first visit, if user preference is indicated via request headers or query parameters, the UI respects and applies that theme; otherwise, defaults to light theme.",
+        "Query syntax highlighting and result panels are clearly legible and visually appropriate in both themes.",
+        "Unit tests exist and pass for the theme resolver helper, validating default theme, system preference detection, and manual override scenarios."
       ],
-      "complexity": "complex",
+      "complexity": "medium",
       "risks": [
-        "Visual glitches or performance issues during theme transitions",
-        "Third-party components lacking support for custom theming",
-        "Potential accessibility compliance failures if contrast ratios are not properly implemented",
-        "Browser compatibility issues with CSS custom properties",
-        "User preference persistence failures across sessions"
+        "Ensuring all UI elements, especially syntax highlighting and result panels, maintain legibility and accessibility in both themes.",
+        "Persisting theme choice solely on server-side session without browser storage may require session management adjustments.",
+        "Detecting user preferred color scheme reliably from request hints or query parameters.",
+        "Injecting theme colors into existing templates without breaking current UI layout or styles."
       ],
-      "recommended_approach": "Implement a CSS custom property-based theming system integrated with the existing component library. Detect system theme preference on initial load and apply it, then allow manual toggling with a UI control that updates state and persists preference in localStorage or backend. Design accessible dark theme color palette and ensure all UI components, including syntax highlighting and data visualizations, adapt accordingly. Implement smooth CSS transitions with fallback options to disable animations for motion-sensitive users. For third-party components, create an adaptation layer or replace with compatible alternatives. Conduct comprehensive visual, accessibility, browser compatibility, persistence, and performance testing.",
+      "recommended_approach": "Define theme color palettes as Python constants or config in the backend. Extend the theme resolver helper to determine the active theme based on session data, request hints, or query parameters. Modify presentation/web_ui.py and helper modules to inject the selected theme colors into templates dynamically. Implement a server-side toggle endpoint or UI control to switch themes, updating the session accordingly. Ensure CSS classes or inline styles adapt based on the injected palette to maintain legibility. Write unit tests for the theme resolver helper covering all scenarios. Perform manual UI testing to verify visual consistency and accessibility.",
       "estimated_files": [
-        "src/styles/theme.css",
-        "src/components/ThemeToggle.js",
-        "src/utils/themeDetection.js",
-        "src/components/QueryEditorSyntaxHighlighting.js",
-        "src/components/DataVisualizationThemeAdapter.js",
-        "src/hooks/useThemePersistence.js"
+        "presentation/web_ui.py",
+        "presentation/helpers/theme_resolver.py",
+        "presentation/templates/base.html",
+        "presentation/static/css/theme.css",
+        "tests/unit/test_theme_resolver.py"
       ]
     },
     "implementation": {
-      "branch_name": "feature/story-9",
+      "branch_name": "feature/dark-light-theme-toggle",
       "implementation_steps": [
         {
           "step": 1,
-          "description": "Create CSS custom properties for dark and light themes in a dedicated stylesheet, ensuring color palettes meet WCAG 2.1 AA contrast standards and include smooth transition animations with a media query to disable animations for motion-sensitive users.",
+          "description": "Define light and dark theme color palettes as Python constants for reuse across the backend and templates.",
           "agent": "CodeAgent",
           "files_to_create": [
-            "src/styles/theme.css"
+            {
+              "path": "presentation/theme_palettes.py",
+              "instructions": [
+                "Create LIGHT_THEME and DARK_THEME dictionaries with color values for backgrounds, text, syntax highlighting, and panels ensuring WCAG accessibility.",
+                "Export these palettes for use in theme resolver and template injection."
+              ]
+            }
           ],
-          "validation": "Verify CSS variables define accessible color palettes for both themes and transitions are smooth and can be disabled via prefers-reduced-motion media query."
+          "files_to_update": [],
+          "validation": "Verify that the theme_palettes.py file contains two dictionaries with appropriate color keys and values."
         },
         {
           "step": 2,
-          "description": "Develop a theme detection utility that detects the user's system theme preference on first visit and falls back gracefully if CSS custom properties are unsupported.",
+          "description": "Implement a theme resolver helper to determine the active theme based on session data, request hints (e.g., 'prefers-color-scheme' header), and query parameters, defaulting to light theme.",
           "agent": "CodeAgent",
           "files_to_create": [
-            "src/utils/themeDetection.js"
+            {
+              "path": "presentation/helpers/theme_resolver.py",
+              "instructions": [
+                "Implement functions to resolve theme preference in order: query parameter override, session stored theme, request header 'Sec-CH-Prefers-Color-Scheme' or 'Prefers-Color-Scheme', then default to light.",
+                "Provide a function to update the session theme based on user toggle.",
+                "Expose a function to get the active theme palette dictionary from theme_palettes.py."
+              ]
+            }
           ],
-          "validation": "Test detection logic across browsers and simulate first visit to confirm correct theme application."
+          "files_to_update": [],
+          "validation": "Unit tests will verify theme resolution logic for all scenarios."
         },
         {
           "step": 3,
-          "description": "Implement a React hook to manage theme state, including persistence of user preference in localStorage and fallback to system preference on initial load.",
+          "description": "Modify presentation/web_ui.py to integrate the theme resolver helper, inject the active theme palette into template rendering context, and add a server-side toggle endpoint to switch themes updating the session.",
           "agent": "CodeAgent",
-          "files_to_create": [
-            "src/hooks/useThemePersistence.js"
+          "files_to_create": [],
+          "files_to_update": [
+            {
+              "path": "presentation/web_ui.py",
+              "instructions": [
+                "Import theme_resolver and theme_palettes modules.",
+                "On each request rendering UI, call theme_resolver to get active theme and inject palette colors into template context.",
+                "Add a new route or handler to toggle theme on user action, updating session and redirecting back to UI.",
+                "Ensure session management supports storing theme preference."
+              ]
+            }
           ],
-          "validation": "Verify theme state persists across page reloads and sessions, and defaults correctly on first visit."
-        },
-        {
-          "step": 4,
-          "description": "Create a ThemeToggle React component that allows users to manually switch themes, updates the theme state, and persists the preference.",
-          "agent": "CodeAgent",
-          "files_to_create": [
-            "src/components/ThemeToggle.js"
-          ],
-          "validation": "Confirm toggle control updates theme immediately, persists preference, and is accessible."
-        },
-        {
-          "step": 5,
-          "description": "Refactor QueryEditorSyntaxHighlighting component to adapt its styles dynamically based on the current theme using CSS custom properties.",
-          "agent": "CodeAgent",
-          "files_to_create": [
-            "src/components/QueryEditorSyntaxHighlighting.js"
-          ],
-          "validation": "Check syntax highlighting colors adapt correctly in both themes with proper contrast."
+          "validation": "Manually verify theme toggling persists across requests and updates UI colors."
         },
         {
           "step": 6,
-          "description": "Develop DataVisualizationThemeAdapter component or utility to ensure all data visualizations adapt their color schemes according to the active theme.",
-          "agent": "CodeAgent",
-          "files_to_create": [
-            "src/components/DataVisualizationThemeAdapter.js"
-          ],
-          "validation": "Verify charts and graphs update colors correctly on theme change without performance degradation."
-        },
-        {
-          "step": 7,
-          "description": "Integrate the theming system with the existing component library to ensure consistent theme application across all UI components, including third-party components by creating adaptation layers or replacing incompatible ones.",
-          "agent": "DevOpsAgent",
-          "files_to_create": [],
-          "validation": "Perform visual regression testing to confirm consistent theming and no visual glitches."
-        },
-        {
-          "step": 8,
-          "description": "Conduct comprehensive testing including visual tests, accessibility audits for color contrast, browser compatibility checks for CSS custom properties, persistence validation, and performance testing of theme transitions.",
+          "description": "Write comprehensive unit tests for the theme resolver helper covering default theme fallback, detection from request headers, query parameter overrides, and session persistence.",
           "agent": "TestAgent",
           "files_to_create": [
-            "tests/test_theme.js"
+            {
+              "path": "tests/unit/test_theme_resolver.py",
+              "instructions": [
+                "Test default theme is light when no hints or session data present.",
+                "Test theme resolution from query parameters overrides session and headers.",
+                "Test theme resolution from session data persists across calls.",
+                "Test theme resolution from request headers when no session or query param.",
+                "Test session update function correctly sets theme."
+              ]
+            }
           ],
-          "validation": "All acceptance criteria met with no regressions or accessibility violations."
+          "files_to_update": [],
+          "validation": "All unit tests pass and cover edge cases."
         }
       ],
       "testing_strategy": {
         "unit_tests": [
-          "theme detection utility",
-          "theme persistence hook",
-          "ThemeToggle component functionality",
-          "syntax highlighting adaptation",
-          "data visualization theming"
+          "tests/unit/test_theme_resolver.py"
         ],
-        "test_files": [
-          "tests/test_theme.js"
-        ]
+        "integration_tests": []
       },
-      "pr_description": "Implemented a comprehensive dark/light theme system using CSS custom properties with WCAG 2.1 AA compliant color palettes. Added intelligent system theme detection, manual toggle control with persistence, smooth transitions respecting motion preferences, and full UI component adaptation including syntax highlighting and data visualizations. Ensured browser compatibility with fallbacks and integrated with existing component library. Included extensive testing for accessibility, performance, and visual correctness."
+      "pr_description": "Implement backend-driven light/dark theme toggle in the Python-rendered web UI. Define accessible color palettes, resolve theme preference from session, request hints, and query parameters. Inject theme colors into templates and CSS for consistent UI appearance. Add server-side toggle endpoint persisting user choice in session. Include unit tests for theme resolution logic."
     }
   },
   "implementation": {
@@ -199,7 +181,7 @@
     {
       "agent": "Orchestrator",
       "action": "Analysis complete",
-      "result": "Complexity: complex, Criteria: 9",
+      "result": "Complexity: medium, Criteria: 5",
       "success": true,
       "state": "analyzing"
     },
@@ -213,7 +195,7 @@
     {
       "agent": "Orchestrator",
       "action": "Execution plan created",
-      "result": "8 steps, Branch: feature/story-9",
+      "result": "4 steps, Branch: feature/dark-light-theme-toggle",
       "success": true,
       "state": "planning"
     },
@@ -227,14 +209,14 @@
     {
       "agent": "DevOps",
       "action": "Creating feature branch",
-      "result": "feature/story-9",
+      "result": "feature/dark-light-theme-toggle",
       "success": true,
       "state": "planning"
     },
     {
       "agent": "DevOps",
       "action": "Branch created",
-      "result": "feature/story-9",
+      "result": "feature/dark-light-theme-toggle",
       "success": true,
       "state": "creating_branch"
     }

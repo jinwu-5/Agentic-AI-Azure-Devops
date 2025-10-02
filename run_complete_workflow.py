@@ -1,9 +1,9 @@
 """
-Complete end-to-end workflow:
-Orchestrate → Branch → Implement → Test → Commit → Push → PR
+Complete end-to-end workflow with --reindex support
 """
 
 import asyncio
+import sys
 from openai import AzureOpenAI
 from config import SystemConfig
 from core import MCPConnectionManager, WorkflowContext
@@ -13,8 +13,13 @@ from utils import StateManager
 
 
 async def main():
+    # Check for --reindex flag
+    force_reindex = '--reindex' in sys.argv
+    
     print("="*60)
     print("COMPLETE WORKFLOW - ORCHESTRATE TO PR")
+    if force_reindex:
+        print("(FORCE REINDEX MODE)")
     print("="*60)
     
     config = SystemConfig()
@@ -27,9 +32,20 @@ async def main():
         api_version=config.api_version
     )
     
-    # Initialize services
-    rag = CodebaseRAG(config.repository_path, ai_client)
-    rag.index_repository()
+    # Initialize RAG (will use cache unless --reindex)
+    rag = CodebaseRAG(
+        config.repository_path,
+        ai_client,
+        embedding_deployment=config.embedding_deployment_name
+    )
+    rag.index_repository(force_reindex=force_reindex)
+    
+    # Show project analysis
+    project_info = rag.analyze_project()
+    print(f"\n[Project Analysis]")
+    print(f"  Language: {project_info['primary_language']}")
+    print(f"  Frameworks: {', '.join(project_info['frameworks']) or 'None detected'}")
+    print(f"  Files: {project_info['total_files']}")
     
     await mcp_manager.start_azure_devops_mcp(
         config.organization_url,
@@ -39,14 +55,20 @@ async def main():
     await mcp_manager.start_filesystem_mcp(config.repository_path)
     
     # Initialize agents
-    orchestrator = OrchestratorAgent(ai_client, config.deployment_name, mcp_manager)
+    orchestrator = OrchestratorAgent(
+        ai_client,
+        config.deployment_name,
+        mcp_manager,
+        rag
+    )
+    orchestrator.refresh_project_context()
     devops_agent = DevOpsAgent(ai_client, config.deployment_name, mcp_manager, config.repository_path)
     code_agent = CodeAgent(ai_client, config.deployment_name, mcp_manager, rag, config.repository_path)
     test_agent = TestAgent(ai_client, config.deployment_name, mcp_manager, rag, config.repository_path)
     
     # Create context
     context = WorkflowContext()
-    context.work_item_id = input("Enter Work Item ID: ") or "9"
+    context.work_item_id = input("\nEnter Work Item ID: ") or "9"
     context.repository_path = config.repository_path
     
     # PHASE 1: Planning
@@ -112,7 +134,6 @@ async def main():
     if await devops_agent.commit_changes(context, commit_message):
         print("✓ Changes committed")
         
-        # Ask before pushing
         response = input("\nPush to remote? (y/n): ")
         if response.lower() == 'y':
             if await devops_agent.push_to_remote(context):
@@ -159,4 +180,9 @@ async def main():
 
 
 if __name__ == "__main__":
+    if '--help' in sys.argv:
+        print("Usage: python run_complete_workflow.py [--reindex]")
+        print("  --reindex: Force rebuild of code embeddings cache")
+        sys.exit(0)
+    
     asyncio.run(main())

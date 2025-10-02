@@ -4,7 +4,7 @@ Generates and runs unit tests for implemented code
 """
 
 from core import BaseAgent, WorkflowContext, AgentState
-from typing import Dict
+from typing import Dict, Any, List
 import os
 
 class TestAgent(BaseAgent):
@@ -44,28 +44,41 @@ class TestAgent(BaseAgent):
         """Execute a single test step"""
         step_num = step.get("step")
         description = step.get("description")
-        files_to_create = step.get("files_to_create", [])
-        
+        file_entries = self._normalize_file_entries(step.get("files_to_create"))
+
         self.log(context, f"Executing step {step_num}", description)
         context.current_state = AgentState.TESTING
-        
-        for file_path in files_to_create:
-            success = await self.create_test_file(context, file_path, description)
+
+        if not file_entries:
+            self.log(context, "No test files", "Step lacks files_to_create entries", False)
+            return False
+
+        for entry in file_entries:
+            instructions = entry.get("instructions") or [description]
+            success = await self.create_test_file(
+                context,
+                entry["path"],
+                description,
+                instructions
+            )
             if not success:
                 return False
-        
+
         return True
-    
-    async def create_test_file(self, context: WorkflowContext, 
-                              file_path: str, description: str) -> bool:
+
+    async def create_test_file(self, context: WorkflowContext,
+                              file_path: str, description: str,
+                              instructions: List[str]) -> bool:
         """Create a test file for the implemented code"""
         self.log(context, "Creating test file", file_path)
         
         # Get implemented files to test
         implemented_files = "\n\n".join([
-            f"--- {path} ---\n{content[:500]}..."
+            f"--- {path} ---\n{content}..."
             for path, content in context.implementation_files.items()
         ])
+
+        instructions_text = '\n'.join(f"- {item}" for item in instructions)
         
         system_prompt = """You are a QA engineer writing comprehensive unit tests.
 
@@ -82,6 +95,9 @@ Write COMPLETE, runnable tests."""
 
 Test File: {file_path}
 Purpose: {description}
+
+Implementation Notes:
+{instructions_text}
 
 Implemented Code:
 {implemented_files}
@@ -100,27 +116,28 @@ Generate COMPLETE test file. Include:
 Respond with ONLY the test file content."""
 
         try:
-            test_content = await self.call_ai(system_prompt, user_prompt, 
+            test_content = await self.call_ai(system_prompt, user_prompt,
                                              temperature=0.2, max_tokens=2500)
-            
-            # Clean markdown
+
             if "```" in test_content:
                 lines = test_content.split('\n')
                 in_code_block = False
                 clean_lines = []
-                
+
                 for line in lines:
                     if line.strip().startswith('```'):
                         in_code_block = not in_code_block
                         continue
-                    if in_code_block or not test_content.count('```'):
+                    if in_code_block:
                         clean_lines.append(line)
-                
-                test_content = '\n'.join(clean_lines)
-            
+
+                if clean_lines:
+                    test_content = '\n'.join(clean_lines)
+
             # Write test file
             full_path = os.path.join(self.repository_path, file_path)
-            os.makedirs(os.path.dirname(full_path), exist_ok=True)
+            target_dir = os.path.dirname(full_path) or self.repository_path
+            os.makedirs(target_dir, exist_ok=True)
             
             with open(full_path, 'w') as f:
                 f.write(test_content)
@@ -138,6 +155,34 @@ Respond with ONLY the test file content."""
             print(f"✗ Error: {e}")
             self.log(context, "Error creating test", str(e), False)
             return False
+    
+    def _normalize_file_entries(self, files: Any) -> List[Dict[str, Any]]:
+        """Normalize file descriptors for test generation"""
+        normalized: List[Dict[str, Any]] = []
+        if not files:
+            return normalized
+
+        if not isinstance(files, list):
+            files = [files]
+
+        for entry in files:
+            if isinstance(entry, str):
+                normalized.append({"path": entry, "instructions": []})
+                continue
+
+            if isinstance(entry, dict):
+                path = entry.get("path") or entry.get("file") or entry.get("target")
+                if not path:
+                    continue
+                instructions = entry.get("instructions", [])
+                if isinstance(instructions, str):
+                    instructions = [instructions]
+                normalized.append({
+                    "path": path,
+                    "instructions": instructions
+                })
+
+        return normalized
     
     async def run_tests(self, context: WorkflowContext) -> bool:
         """Run the test suite"""

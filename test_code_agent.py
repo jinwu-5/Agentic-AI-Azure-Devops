@@ -29,7 +29,11 @@ async def main():
         api_version=config.api_version
     )
     
-    rag = CodebaseRAG(config.repository_path, ai_client)
+    rag = CodebaseRAG(
+        config.repository_path,
+        ai_client,
+        embedding_deployment=config.embedding_deployment_name
+    )
     rag.index_repository()
     
     await mcp_manager.start_filesystem_mcp(config.repository_path)
@@ -51,7 +55,30 @@ async def main():
         print(f"STEP {i}/{len(code_steps)}")
         print('='*60)
         print(f"Description: {step.get('description')[:100]}...")
-        print(f"Files: {', '.join(step.get('files_to_create', []))}")
+        files = step.get('files_to_create', [])
+        if files:
+            if isinstance(files, list):
+                if files and isinstance(files[0], dict):
+                    paths = ', '.join(f.get('path', '') for f in files if isinstance(f, dict))
+                else:
+                    paths = ', '.join(files)
+            elif isinstance(files, dict):
+                paths = files.get('path', '')
+            else:
+                paths = str(files)
+            print(f"Files: {paths}")
+        updates = step.get('files_to_update', [])
+        if updates:
+            if isinstance(updates, list):
+                update_paths = ', '.join(
+                    (u.get('path', '') if isinstance(u, dict) else str(u))
+                    for u in updates
+                )
+            elif isinstance(updates, dict):
+                update_paths = updates.get('path', '')
+            else:
+                update_paths = str(updates)
+            print(f"Updates: {update_paths}")
         
         success = await code_agent.execute_step(context, step)
         

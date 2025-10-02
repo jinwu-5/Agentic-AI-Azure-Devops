@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/ai-agent-azure-devops.iml" filepath="$PROJECT_DIR$/.idea/ai-agent-azure-devops.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../DB-Agent/.idea/sql-agent.iml" filepath="$PROJECT_DIR$/../DB-Agent/.idea/sql-agent.iml" />
     </modules>
   </component>
 </project>

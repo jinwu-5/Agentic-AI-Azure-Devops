@@ -28,7 +28,11 @@ async def main():
     )
     
     # Initialize
-    rag = CodebaseRAG(config.repository_path, ai_client)
+    rag = CodebaseRAG(
+        config.repository_path,
+        ai_client,
+        embedding_deployment=config.embedding_deployment_name
+    )
     rag.index_repository()
     
     await mcp_manager.start_azure_devops_mcp(
@@ -38,7 +42,13 @@ async def main():
     )
     await mcp_manager.start_filesystem_mcp(config.repository_path)
     
-    orchestrator = OrchestratorAgent(ai_client, config.deployment_name, mcp_manager)
+    orchestrator = OrchestratorAgent(
+        ai_client,
+        config.deployment_name,
+        mcp_manager,
+        rag
+    )
+    orchestrator.refresh_project_context()
     devops_agent = DevOpsAgent(ai_client, config.deployment_name, mcp_manager, config.repository_path)
     code_agent = CodeAgent(ai_client, config.deployment_name, mcp_manager, rag, config.repository_path)
     

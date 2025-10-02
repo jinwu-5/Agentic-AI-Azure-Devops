@@ -1,23 +1,19 @@
 {
-  "saved_at": "2025-09-30T20:56:26.676534",
+  "saved_at": "2025-10-01T22:37:54.414949",
   "work_item": {
     "id": "9",
     "title": "Dark/Light Theme Implementation",
-    "description": "\ud83d\udea9 AC Addressed (Required) Implement dark/light theme support Redesign query interface with modern, clean aesthetics \ud83d\udca1 What do you want to accomplish? (Required) Develop a comprehensive theming system using CSS custom properties that supports both dark and light themes with proper contrast ratios meeting WCAG accessibility standards. Implement intelligent theme detection that respects user's system preference on first visit, with a toggle control for manual switching and persistent storage of user preference across sessions. Create smooth theme transition animations and ensure all UI components, including syntax highlighting and data visualizations, properly adapt to both theme variants. \ud83d\udccb Testability Considerations (Required) Visual testing for all components in both dark and light themes Accessibility testing for contrast ratios in both themes (WCAG 2.1 AA compliance) Browser testing for CSS custom property support and fallbacks User preference persistence testing across browser sessions Theme transition animation performance testing Integration testing with existing component library \u2699 Implementation (Optional) \u270b Technical Dependencies CSS custom properties support in target browsers Component library theming architecture User preference storage mechanism (localStorage/backend) \ud83d\udee0\ufe0f Engineering Work To Be Implemented CSS custom property-based theming system Theme toggle component with state management Dark theme color palette design with accessibility compliance Theme-aware syntax highlighting for query editor Theme transition animations and performance optimization System preference detection and user preference persistence \u26a0 Risks & Mitigations Risk: Theme switching may cause visual glitches or performance issues during transitions Mitigation 1: Implement CSS transitions carefully to avoid layout shifts Mitigation 2: Add option to disable animations for users with motion sensitivity Risk: Third-party components may not support custom theming Mitigation 1: Create theme adaptation layer for external components Mitigation 2: Select theme-compatible libraries or build custom alternatives",
+    "description": "\ud83d\udea9 AC Addressed (Required) Introduce light/dark theme selection entirely within the existing Python-rendered web UI (presentation/web_ui.py and helpers). Ensure query syntax highlighting and result panels remain legible under both themes. Persist the user\u2019s theme choice across requests within the active session (no browser-only storage). \ud83d\udca1 What do you want to accomplish? (Required) Develop a theme system driven by Python: define colour palettes as backend constants/config, inject them into the current templates, and expose a server-side toggle. On first visit, respect the user\u2019s preferred colour scheme when available (e.g., via request hints or explicit query parameter) and fall back to light. \ud83d\udccb Testability Considerations (Required) Unit tests for the theme resolver helper (default, system hint, manual override).",
     "acceptance_criteria": [
-      "Visual tests confirm all UI components render correctly in both dark and light themes",
-      "Accessibility tests verify color contrast ratios meet WCAG 2.1 AA standards in both themes",
-      "Browser tests confirm CSS custom properties are supported or appropriate fallbacks are applied",
-      "User preference for theme is persisted and restored correctly across browser sessions",
-      "Theme toggle control functions correctly allowing manual switching",
-      "Theme detection correctly applies system preference on first visit",
-      "Theme transition animations run smoothly without layout shifts or performance degradation",
-      "Option exists to disable animations for users with motion sensitivity",
-      "Third-party components adapt correctly to theme changes or are replaced with compatible alternatives"
+      "User can toggle between light and dark themes via a server-side toggle exposed in the UI.",
+      "Theme selection persists across multiple requests within the same session without using browser-only storage mechanisms like localStorage or cookies.",
+      "On first visit, if user preference is indicated via request headers or query parameters, the UI respects and applies that theme; otherwise, defaults to light theme.",
+      "Query syntax highlighting and result panels are clearly legible and visually appropriate in both themes.",
+      "Unit tests exist and pass for the theme resolver helper, validating default theme, system preference detection, and manual override scenarios."
     ]
   },
   "git": {
-    "branch_name": "feature/story-9",
+    "branch_name": "feature/dark-light-theme-toggle",
     "repository_path": "/Users/jinwu/Projects/DB-Agent"
   },
   "execution_plan": {
@@ -31,151 +27,134 @@
       "story_points": null
     },
     "analysis": {
-      "summary": "Implement a comprehensive dark/light theming system with accessibility compliance, intelligent theme detection, user preference persistence, smooth transitions, and full UI component adaptation including syntax highlighting and data visualizations.",
+      "summary": "Implement a backend-driven light/dark theme toggle within the existing Python-rendered web UI, ensuring UI elements remain legible, persisting user choice in session, and respecting user preference on first visit.",
       "technical_requirements": [
-        "Develop theming system using CSS custom properties supporting dark and light themes",
-        "Ensure color contrast ratios meet WCAG 2.1 AA accessibility standards",
-        "Implement intelligent theme detection respecting user's system preference on first visit",
-        "Provide toggle control for manual theme switching",
-        "Persist user theme preference across browser sessions",
-        "Create smooth theme transition animations with performance optimization",
-        "Ensure all UI components including syntax highlighting and data visualizations adapt to theme changes",
-        "Support browser compatibility for CSS custom properties with fallbacks",
-        "Integrate with existing component library theming architecture"
+        "Define color palettes for light and dark themes as Python backend constants or configuration.",
+        "Inject theme colors into existing templates rendered by presentation/web_ui.py and helpers.",
+        "Implement server-side toggle to switch themes during active session without relying on browser-only storage.",
+        "Persist user theme choice across requests within the active session (e.g., server-side session storage).",
+        "On first visit, detect and respect user preferred color scheme via request hints or explicit query parameter, defaulting to light theme if unavailable.",
+        "Ensure query syntax highlighting and result panels remain legible and visually consistent under both themes.",
+        "Develop unit tests for the theme resolver helper covering default behavior, system preference detection, and manual override."
       ],
       "acceptance_criteria": [
-        "Visual tests confirm all UI components render correctly in both dark and light themes",
-        "Accessibility tests verify color contrast ratios meet WCAG 2.1 AA standards in both themes",
-        "Browser tests confirm CSS custom properties are supported or appropriate fallbacks are applied",
-        "User preference for theme is persisted and restored correctly across browser sessions",
-        "Theme toggle control functions correctly allowing manual switching",
-        "Theme detection correctly applies system preference on first visit",
-        "Theme transition animations run smoothly without layout shifts or performance degradation",
-        "Option exists to disable animations for users with motion sensitivity",
-        "Third-party components adapt correctly to theme changes or are replaced with compatible alternatives"
+        "User can toggle between light and dark themes via a server-side toggle exposed in the UI.",
+        "Theme selection persists across multiple requests within the same session without using browser-only storage mechanisms like localStorage or cookies.",
+        "On first visit, if user preference is indicated via request headers or query parameters, the UI respects and applies that theme; otherwise, defaults to light theme.",
+        "Query syntax highlighting and result panels are clearly legible and visually appropriate in both themes.",
+        "Unit tests exist and pass for the theme resolver helper, validating default theme, system preference detection, and manual override scenarios."
       ],
-      "complexity": "complex",
+      "complexity": "medium",
       "risks": [
-        "Visual glitches or performance issues during theme transitions",
-        "Third-party components lacking support for custom theming",
-        "Potential accessibility compliance failures if contrast ratios are not properly implemented",
-        "Browser compatibility issues with CSS custom properties",
-        "User preference persistence failures across sessions"
+        "Ensuring all UI elements, especially syntax highlighting and result panels, maintain legibility and accessibility in both themes.",
+        "Persisting theme choice solely on server-side session without browser storage may require session management adjustments.",
+        "Detecting user preferred color scheme reliably from request hints or query parameters.",
+        "Injecting theme colors into existing templates without breaking current UI layout or styles."
       ],
-      "recommended_approach": "Implement a CSS custom property-based theming system integrated with the existing component library. Detect system theme preference on initial load and apply it, then allow manual toggling with a UI control that updates state and persists preference in localStorage or backend. Design accessible dark theme color palette and ensure all UI components, including syntax highlighting and data visualizations, adapt accordingly. Implement smooth CSS transitions with fallback options to disable animations for motion-sensitive users. For third-party components, create an adaptation layer or replace with compatible alternatives. Conduct comprehensive visual, accessibility, browser compatibility, persistence, and performance testing.",
+      "recommended_approach": "Define theme color palettes as Python constants or config in the backend. Extend the theme resolver helper to determine the active theme based on session data, request hints, or query parameters. Modify presentation/web_ui.py and helper modules to inject the selected theme colors into templates dynamically. Implement a server-side toggle endpoint or UI control to switch themes, updating the session accordingly. Ensure CSS classes or inline styles adapt based on the injected palette to maintain legibility. Write unit tests for the theme resolver helper covering all scenarios. Perform manual UI testing to verify visual consistency and accessibility.",
       "estimated_files": [
-        "src/styles/theme.css",
-        "src/components/ThemeToggle.js",
-        "src/utils/themeDetection.js",
-        "src/components/QueryEditorSyntaxHighlighting.js",
-        "src/components/DataVisualizationThemeAdapter.js",
-        "src/hooks/useThemePersistence.js"
+        "presentation/web_ui.py",
+        "presentation/helpers/theme_resolver.py",
+        "presentation/templates/base.html",
+        "presentation/static/css/theme.css",
+        "tests/unit/test_theme_resolver.py"
       ]
     },
     "implementation": {
-      "branch_name": "feature/story-9",
+      "branch_name": "feature/dark-light-theme-toggle",
       "implementation_steps": [
         {
           "step": 1,
-          "description": "Create CSS custom properties for dark and light themes in a dedicated stylesheet, ensuring color palettes meet WCAG 2.1 AA contrast standards and include smooth transition animations with a media query to disable animations for motion-sensitive users.",
+          "description": "Define light and dark theme color palettes as Python constants for reuse across the backend and templates.",
           "agent": "CodeAgent",
           "files_to_create": [
-            "src/styles/theme.css"
+            {
+              "path": "presentation/theme_palettes.py",
+              "instructions": [
+                "Create LIGHT_THEME and DARK_THEME dictionaries with color values for backgrounds, text, syntax highlighting, and panels ensuring WCAG accessibility.",
+                "Export these palettes for use in theme resolver and template injection."
+              ]
+            }
           ],
-          "validation": "Verify CSS variables define accessible color palettes for both themes and transitions are smooth and can be disabled via prefers-reduced-motion media query."
+          "files_to_update": [],
+          "validation": "Verify that the theme_palettes.py file contains two dictionaries with appropriate color keys and values."
         },
         {
           "step": 2,
-          "description": "Develop a theme detection utility that detects the user's system theme preference on first visit and falls back gracefully if CSS custom properties are unsupported.",
+          "description": "Implement a theme resolver helper to determine the active theme based on session data, request hints (e.g., 'prefers-color-scheme' header), and query parameters, defaulting to light theme.",
           "agent": "CodeAgent",
           "files_to_create": [
-            "src/utils/themeDetection.js"
+            {
+              "path": "presentation/helpers/theme_resolver.py",
+              "instructions": [
+                "Implement functions to resolve theme preference in order: query parameter override, session stored theme, request header 'Sec-CH-Prefers-Color-Scheme' or 'Prefers-Color-Scheme', then default to light.",
+                "Provide a function to update the session theme based on user toggle.",
+                "Expose a function to get the active theme palette dictionary from theme_palettes.py."
+              ]
+            }
           ],
-          "validation": "Test detection logic across browsers and simulate first visit to confirm correct theme application."
+          "files_to_update": [],
+          "validation": "Unit tests will verify theme resolution logic for all scenarios."
         },
         {
           "step": 3,
-          "description": "Implement a React hook to manage theme state, including persistence of user preference in localStorage and fallback to system preference on initial load.",
+          "description": "Modify presentation/web_ui.py to integrate the theme resolver helper, inject the active theme palette into template rendering context, and add a server-side toggle endpoint to switch themes updating the session.",
           "agent": "CodeAgent",
-          "files_to_create": [
-            "src/hooks/useThemePersistence.js"
+          "files_to_create": [],
+          "files_to_update": [
+            {
+              "path": "presentation/web_ui.py",
+              "instructions": [
+                "Import theme_resolver and theme_palettes modules.",
+                "On each request rendering UI, call theme_resolver to get active theme and inject palette colors into template context.",
+                "Add a new route or handler to toggle theme on user action, updating session and redirecting back to UI.",
+                "Ensure session management supports storing theme preference."
+              ]
+            }
           ],
-          "validation": "Verify theme state persists across page reloads and sessions, and defaults correctly on first visit."
-        },
-        {
-          "step": 4,
-          "description": "Create a ThemeToggle React component that allows users to manually switch themes, updates the theme state, and persists the preference.",
-          "agent": "CodeAgent",
-          "files_to_create": [
-            "src/components/ThemeToggle.js"
-          ],
-          "validation": "Confirm toggle control updates theme immediately, persists preference, and is accessible."
-        },
-        {
-          "step": 5,
-          "description": "Refactor QueryEditorSyntaxHighlighting component to adapt its styles dynamically based on the current theme using CSS custom properties.",
-          "agent": "CodeAgent",
-          "files_to_create": [
-            "src/components/QueryEditorSyntaxHighlighting.js"
-          ],
-          "validation": "Check syntax highlighting colors adapt correctly in both themes with proper contrast."
+          "validation": "Manually verify theme toggling persists across requests and updates UI colors."
         },
         {
           "step": 6,
-          "description": "Develop DataVisualizationThemeAdapter component or utility to ensure all data visualizations adapt their color schemes according to the active theme.",
-          "agent": "CodeAgent",
-          "files_to_create": [
-            "src/components/DataVisualizationThemeAdapter.js"
-          ],
-          "validation": "Verify charts and graphs update colors correctly on theme change without performance degradation."
-        },
-        {
-          "step": 7,
-          "description": "Integrate the theming system with the existing component library to ensure consistent theme application across all UI components, including third-party components by creating adaptation layers or replacing incompatible ones.",
-          "agent": "DevOpsAgent",
-          "files_to_create": [],
-          "validation": "Perform visual regression testing to confirm consistent theming and no visual glitches."
-        },
-        {
-          "step": 8,
-          "description": "Conduct comprehensive testing including visual tests, accessibility audits for color contrast, browser compatibility checks for CSS custom properties, persistence validation, and performance testing of theme transitions.",
+          "description": "Write comprehensive unit tests for the theme resolver helper covering default theme fallback, detection from request headers, query parameter overrides, and session persistence.",
           "agent": "TestAgent",
           "files_to_create": [
-            "tests/test_theme.js"
+            {
+              "path": "tests/unit/test_theme_resolver.py",
+              "instructions": [
+                "Test default theme is light when no hints or session data present.",
+                "Test theme resolution from query parameters overrides session and headers.",
+                "Test theme resolution from session data persists across calls.",
+                "Test theme resolution from request headers when no session or query param.",
+                "Test session update function correctly sets theme."
+              ]
+            }
           ],
-          "validation": "All acceptance criteria met with no regressions or accessibility violations."
+          "files_to_update": [],
+          "validation": "All unit tests pass and cover edge cases."
         }
       ],
       "testing_strategy": {
         "unit_tests": [
-          "theme detection utility",
-          "theme persistence hook",
-          "ThemeToggle component functionality",
-          "syntax highlighting adaptation",
-          "data visualization theming"
+          "tests/unit/test_theme_resolver.py"
         ],
-        "test_files": [
-          "tests/test_theme.js"
-        ]
+        "integration_tests": []
       },
-      "pr_description": "Implemented a comprehensive dark/light theme system using CSS custom properties with WCAG 2.1 AA compliant color palettes. Added intelligent system theme detection, manual toggle control with persistence, smooth transitions respecting motion preferences, and full UI component adaptation including syntax highlighting and data visualizations. Ensured browser compatibility with fallbacks and integrated with existing component library. Included extensive testing for accessibility, performance, and visual correctness."
+      "pr_description": "Implement backend-driven light/dark theme toggle in the Python-rendered web UI. Define accessible color palettes, resolve theme preference from session, request hints, and query parameters. Inject theme colors into templates and CSS for consistent UI appearance. Add server-side toggle endpoint persisting user choice in session. Include unit tests for theme resolution logic."
     }
   },
   "implementation": {
     "files": {
-      "src/styles/theme.css": ":root {\n  /* Light theme colors */\n  --color-bg: #ffffff;\n  --color-text: #1a1a1a;\n  --color-primary: #005a9c;\n  --color-primary-hover: #004578;\n  --color-secondary: #0078d4;\n  --color-secondary-hover: #005a9c;\n  --color-border: #cccccc;\n  --color-error: #b00020;\n  --color-success: #107c10;\n}\n\n@media (prefers-color-scheme: dark) {\n  :root {\n    /* Dark theme colors */\n    --color-bg: #121212;\n    --color-text: #e1e1e1;\n    --color-primary: #3399ff;\n    --color-primary-hover: #66b2ff;\n    --color-secondary: #80caff;\n    --color-secondary-hover: #a3d4ff;\n    --color-border: #333333;\n    --color-error: #cf6679;\n    --color-success: #4caf50;\n  }\n}\n\n/* Smooth transitions for color changes */\n:root {\n  transition: \n    --color-bg 0.3s ease,\n    --color-text 0.3s ease,\n    --color-primary 0.3s ease,\n    --color-primary-hover 0.3s ease,\n    --color-secondary 0.3s ease,\n    --color-secondary-hover 0.3s ease,\n    --color-border 0.3s ease,\n    --color-error 0.3s ease,\n    --color-success 0.3s ease;\n}\n\n/* Disable animations and transitions for users who prefer reduced motion */\n@media (prefers-reduced-motion: reduce) {\n  :root {\n    transition: none !important;\n  }\n}",
-      "src/utils/themeDetection.js": "// src/utils/themeDetection.js\n\n/**\n * Detects the user's preferred color scheme (dark or light) based on system settings.\n * Falls back gracefully if CSS custom properties are unsupported.\n *\n * Returns:\n *   'dark'  - if user prefers dark mode\n *   'light' - if user prefers light mode or no preference detected\n */\n\nfunction supportsCSSCustomProperties() {\n  return window.CSS && window.CSS.supports && window.CSS.supports('--fake-var', 0);\n}\n\nfunction getSystemThemePreference() {\n  if (window.matchMedia) {\n    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {\n      return 'dark';\n    }\n    if (window.matchMedia('(prefers-color-scheme: light)').matches) {\n      return 'light';\n    }\n  }\n  return null;\n}\n\nfunction detectTheme() {\n  if (!supportsCSSCustomProperties()) {\n    // If CSS custom properties are not supported, fallback to light theme\n    return 'light';\n  }\n\n  // Try to detect system preference\n  const systemPref = getSystemThemePreference();\n  if (systemPref === 'dark' || systemPref === 'light') {\n    return systemPref;\n  }\n\n  // Default fallback\n  return 'light';\n}\n\nexport default detectTheme;",
-      "src/hooks/useThemePersistence.js": "import { useState, useEffect } from 'react';\n\nconst THEME_STORAGE_KEY = 'user-theme-preference';\n\nfunction getSystemPreference() {\n  if (typeof window === 'undefined' || !window.matchMedia) {\n    return 'light';\n  }\n  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';\n}\n\nfunction getInitialTheme() {\n  if (typeof window === 'undefined') {\n    return 'light';\n  }\n  try {\n    const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);\n    if (storedTheme === 'dark' || storedTheme === 'light') {\n      return storedTheme;\n    }\n  } catch {\n    // ignore localStorage errors\n  }\n  return getSystemPreference();\n}\n\nexport default function useThemePersistence() {\n  const [theme, setTheme] = useState(getInitialTheme);\n\n  useEffect(() => {\n    try {\n      localStorage.setItem(THEME_STORAGE_KEY, theme);\n    } catch {\n      // ignore localStorage errors\n    }\n  }, [theme]);\n\n  useEffect(() => {\n    if (typeof window === 'undefined' || !window.matchMedia) {\n      return;\n    }\n    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');\n\n    function handleChange(e) {\n      // Only update theme if user has no explicit preference stored\n      try {\n        const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);\n        if (storedTheme !== 'dark' && storedTheme !== 'light') {\n          setTheme(e.matches ? 'dark' : 'light');\n        }\n      } catch {\n        // ignore localStorage errors\n      }\n    }\n\n    mediaQuery.addEventListener\n      ? mediaQuery.addEventListener('change', handleChange)\n      : mediaQuery.addListener(handleChange);\n\n    return () => {\n      mediaQuery.removeEventListener\n        ? mediaQuery.removeEventListener('change', handleChange)\n        : mediaQuery.removeListener(handleChange);\n    };\n  }, []);\n\n  return [theme, setTheme];\n}",
-      "src/components/ThemeToggle.js": "import React, { useEffect, useState } from 'react';\n\nconst THEME_KEY = 'user-theme-preference';\n\nconst getInitialTheme = () => {\n  if (typeof window === 'undefined') return 'light';\n  const storedTheme = localStorage.getItem(THEME_KEY);\n  if (storedTheme === 'light' || storedTheme === 'dark') return storedTheme;\n  // If no stored preference, use system preference\n  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;\n  return prefersDark ? 'dark' : 'light';\n};\n\nconst applyTheme = (theme) => {\n  const root = window.document.documentElement;\n  if (theme === 'dark') {\n    root.classList.add('dark');\n    root.classList.remove('light');\n  } else {\n    root.classList.add('light');\n    root.classList.remove('dark');\n  }\n};\n\nexport default function ThemeToggle() {\n  const [theme, setTheme] = useState(getInitialTheme);\n\n  useEffect(() => {\n    applyTheme(theme);\n    localStorage.setItem(THEME_KEY, theme);\n  }, [theme]);\n\n  const toggleTheme = () => {\n    setTheme((curr) => (curr === 'dark' ? 'light' : 'dark'));\n  };\n\n  return (\n    <button\n      aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}\n      onClick={toggleTheme}\n      style={{\n        cursor: 'pointer',\n        padding: '0.5rem 1rem',\n        backgroundColor: theme === 'dark' ? '#222' : '#eee',\n        color: theme === 'dark' ? '#eee' : '#222',\n        border: 'none',\n        borderRadius: '4px',\n        fontSize: '1rem',\n      }}\n      type=\"button\"\n    >\n      {theme === 'dark' ? '\ud83c\udf1e Light Mode' : '\ud83c\udf19 Dark Mode'}\n    </button>\n  );\n}",
-      "src/components/QueryEditorSyntaxHighlighting.js": "import React from 'react';\n\nconst style = `\n  .query-editor {\n    background-color: var(--qe-bg, #fff);\n    color: var(--qe-fg, #000);\n    font-family: monospace;\n    padding: 1rem;\n    border-radius: 4px;\n    white-space: pre-wrap;\n    word-break: break-word;\n    font-size: 14px;\n  }\n  .query-editor .keyword {\n    color: var(--qe-keyword, #0070f3);\n    font-weight: 600;\n  }\n  .query-editor .string {\n    color: var(--qe-string, #d14);\n  }\n  .query-editor .comment {\n    color: var(--qe-comment, #6a9955);\n    font-style: italic;\n  }\n  .query-editor .number {\n    color: var(--qe-number, #098658);\n  }\n  .query-editor .operator {\n    color: var(--qe-operator, #333);\n  }\n`;\n\nconst keywords = [\n  'select', 'from', 'where', 'and', 'or', 'not', 'insert', 'update', 'delete',\n  'create', 'drop', 'alter', 'table', 'into', 'values', 'set', 'join', 'on',\n  'group', 'by', 'order', 'limit', 'as', 'in', 'is', 'null', 'like', 'distinct'\n];\n\nconst operators = ['=', '>', '<', '>=', '<=', '<>', '!=', '+', '-', '*', '/', '%'];\n\nfunction escapeHtml(text) {\n  return text.replace(/[&<>\"']/g, m => ({\n    '&': '&amp;',\n    '<': '&lt;',\n    '>': '&gt;',\n    '\"': '&quot;',\n    \"'\": '&#39;'\n  })[m]);\n}\n\nfunction tokenize(text) {\n  const tokens = [];\n  let pos = 0;\n  const len = text.length;\n\n  while (pos < len) {\n    const char = text[pos];\n\n    // Comments (single line starting with # or --)\n    if (char === '#') {\n      const commentText = text.slice(pos);\n      tokens.push({ type: 'comment', value: commentText });\n      break;\n    }\n    if (char === '-' && text[pos + 1] === '-') {\n      const endOfLine = text.indexOf('\\n', pos);\n      const commentText = endOfLine === -1 ? text.slice(pos) : text.slice(pos, endOfLine);\n      tokens.push({ type: 'comment', value: commentText });\n      pos += commentText.length;\n      continue;\n    }\n\n    // Strings (single or double quoted)\n    if (char === '\\'' || char === '\"') {\n      const quoteType = char;\n      let endPos = pos + 1;\n      let escaped = false;\n      while (endPos < len) {\n        if (text[endPos] === '\\\\' && !escaped) {\n          escaped = true;\n          endPos++;\n          continue;\n        }\n        if (text[endPos] === quoteType && !escaped) {\n          break;\n        }\n        escaped = false;\n        endPos++;\n      }\n      const str = text.slice(pos, endPos + 1);\n      tokens.push({ type: 'string', value: str });\n      pos = endPos + 1;\n      continue;\n    }\n\n    // Numbers\n    if (/\\d/.test(char)) {\n      let endPos = pos + 1;\n      while (endPos < len && /[\\d\\.]/.test(text[endPos])) {\n        endPos++;\n      }\n      const num = text.slice(pos, endPos);\n      tokens.push({ type: 'number', value: num });\n      pos = endPos;\n      continue;\n    }\n\n    // Operators\n    let opMatched = false;\n    for (const op of operators) {\n      if (text.startsWith(op, pos)) {\n        tokens.push({ type: 'operator', value: op });\n        pos += op.length;\n        opMatched = true;\n        break;\n      }\n    }\n    if (opMatched) continue;\n\n    // Words (keywords or identifiers)\n    if (/[a-zA-Z_]/.test(char)) {\n      let endPos = pos + 1;\n      while (endPos < len && /[a-zA-Z0-9_]/.test(text[endPos])) {\n        endPos++;\n      }\n      const word = text.slice(pos, endPos);\n      if (keywords.includes(word.toLowerCase())) {\n        tokens.push({ type: 'keyword', value: word });\n      } else {\n        tokens.push({ type: 'text', value: word });\n      }\n      pos = endPos;\n      continue;\n    }\n\n    // Whitespace or other single characters\n    tokens.push({ type: 'text', value: char });\n    pos++;\n  }\n\n  return tokens;\n}\n\nexport default function QueryEditorSyntaxHighlighting({ query }) {\n  const tokens = React.useMemo(() => tokenize(query), [query]);\n\n  return (\n    <>\n      <style>{style}</style>\n      <pre className=\"query-editor\" aria-label=\"Query editor with syntax highlighting\">\n        {tokens.map((token, i) => {\n          if (token.type === 'text') {\n            return <span key={i}>{token.value}</span>;\n          }\n          return (\n            <span key={i} className={token.type}>\n              {token.value}\n            </span>\n          );\n        })}\n      </pre>\n    </>\n  );\n}",
-      "src/components/DataVisualizationThemeAdapter.js": "// src/components/DataVisualizationThemeAdapter.js\n\nimport React, { useContext, useMemo } from 'react';\n\n// Assuming there is a ThemeContext providing current theme info\n// If not, you can replace this with your actual theme provider/context\nconst ThemeContext = React.createContext({\n  theme: 'light', // 'light' or 'dark'\n  colors: {\n    light: {\n      primary: '#1976d2',\n      secondary: '#9c27b0',\n      background: '#ffffff',\n      text: '#000000',\n      chartColors: [\n        '#1976d2',\n        '#9c27b0',\n        '#ff9800',\n        '#4caf50',\n        '#f44336',\n        '#00bcd4',\n        '#cddc39',\n      ],\n    },\n    dark: {\n      primary: '#90caf9',\n      secondary: '#ce93d8',\n      background: '#121212',\n      text: '#ffffff',\n      chartColors: [\n        '#90caf9',\n        '#ce93d8',\n        '#ffb74d',\n        '#81c784',\n        '#e57373',\n        '#4dd0e1',\n        '#dce775',\n      ],\n    },\n  },\n});\n\n/**\n * Hook to get adapted colors for data visualizations based on active theme.\n * Returns an object with colors to be used in charts.\n */\nexport function useDataVisualizationColors() {\n  const { theme, colors } = useContext(ThemeContext);\n\n  // Memoize to avoid recalculations on every render\n  const adaptedColors = useMemo(() => {\n    const themeColors = colors[theme] || colors.light;\n\n    return {\n      primary: themeColors.primary,\n      secondary: themeColors.secondary,\n      background: themeColors.background,\n      text: themeColors.text,\n      chartColors: themeColors.chartColors,\n    };\n  }, [theme, colors]);\n\n  return adaptedColors;\n}\n\n/**\n * Higher Order Component to inject theme-adapted colors into a data visualization component.\n * The wrapped component will receive a `themeColors` prop with adapted colors.\n * \n * Usage:\n * const ThemedChart = withDataVisualizationTheme(ChartComponent);\n */\nexport function withDataVisualizationTheme(Component) {\n  return function ThemedComponent(props) {\n    const themeColors = useDataVisualizationColors();\n    return <Component {...props} themeColors={themeColors} />;\n  };\n}\n\n/**\n * DataVisualizationThemeAdapter component that uses render props pattern.\n * It provides theme-adapted colors to its child function.\n * \n * Usage:\n * <DataVisualizationThemeAdapter>\n *   {(themeColors) => <ChartComponent themeColors={themeColors} />}\n * </DataVisualizationThemeAdapter>\n */\nexport function DataVisualizationThemeAdapter({ children }) {\n  const themeColors = useDataVisualizationColors();\n  return children(themeColors);\n}\n\nexport default DataVisualizationThemeAdapter;"
+      "presentation/theme_palettes.py": "# presentation/theme_palettes.py\n\n\"\"\"\nTheme palettes for light and dark modes.\nDefines color constants for backgrounds, text, syntax highlighting, and panels,\nensuring WCAG accessibility for use across backend and templates.\n\"\"\"\n\n# WCAG AA compliant color palettes for light and dark themes\n\nLIGHT_THEME = {\n    # Backgrounds\n    \"background\": \"#FFFFFF\",           # white background\n    \"panel_background\": \"#F5F7FA\",     # light gray panel background\n    \"code_background\": \"#F0F0F0\",      # very light gray for code blocks\n\n    # Text\n    \"text_primary\": \"#1B1F23\",         # very dark gray for primary text\n    \"text_secondary\": \"#6E7781\",       # medium gray for secondary text\n    \"text_link\": \"#0969DA\",            # blue links\n    \"text_link_hover\": \"#054AB9\",      # darker blue on hover\n\n    # Borders and dividers\n    \"border\": \"#D0D7DE\",               # light gray border\n\n    # Syntax highlighting (monochrome + color accents)\n    \"syntax_comment\": \"#6A737D\",       # gray comments\n    \"syntax_keyword\": \"#A626A4\",       # purple keywords\n    \"syntax_string\": \"#50A14F\",        # green strings\n    \"syntax_number\": \"#986801\",        # dark yellow numbers\n    \"syntax_function\": \"#4078F2\",      # blue function names\n    \"syntax_variable\": \"#E45649\",      # red variables\n    \"syntax_constant\": \"#0184BC\",      # cyan constants\n    \"syntax_type\": \"#986801\",          # dark yellow types\n    \"syntax_operator\": \"#000000\",      # black operators\n\n    # UI elements\n    \"button_background\": \"#0969DA\",\n    \"button_text\": \"#FFFFFF\",\n    \"button_hover_background\": \"#054AB9\",\n}\n\nDARK_THEME = {\n    # Backgrounds\n    \"background\": \"#0D1117\",           # very dark blue/black background\n    \"panel_background\": \"#161B22\",     # dark gray panel background\n    \"code_background\": \"#161B22\",      # same as panel for code blocks\n\n    # Text\n    \"text_primary\": \"#C9D1D9\",         # light gray for primary text\n    \"text_secondary\": \"#8B949E\",       # medium gray for secondary text\n    \"text_link\": \"#58A6FF\",            # bright blue links\n    \"text_link_hover\": \"#1F6FEB\",      # brighter blue on hover\n\n    # Borders and dividers\n    \"border\": \"#30363D\",               # dark gray border\n\n    # Syntax highlighting\n    \"syntax_comment\": \"#8B949E\",       # gray comments\n    \"syntax_keyword\": \"#D2A8FF\",       # lavender keywords\n    \"syntax_string\": \"#A5D6A7\",        # light green strings\n    \"syntax_number\": \"#F9C513\",        # gold numbers\n    \"syntax_function\": \"#79C0FF\",      # light blue function names\n    \"syntax_variable\": \"#F97583\",      # pink variables\n    \"syntax_constant\": \"#58A6FF\",      # bright blue constants\n    \"syntax_type\": \"#F9C513\",          # gold types\n    \"syntax_operator\": \"#C9D1D9\",      # off-white operators\n\n    # UI elements\n    \"button_background\": \"#238636\",\n    \"button_text\": \"#FFFFFF\",\n    \"button_hover_background\": \"#2EA043\",\n}\n\n__all__ = [\"LIGHT_THEME\", \"DARK_THEME\"]",
+      "presentation/helpers/theme_resolver.py": "# presentation/helpers/theme_resolver.py\n\nfrom typing import Optional, Dict, Any\nfrom flask import Request, session\n\nfrom presentation.helpers import theme_palettes\n\n\nTHEME_SESSION_KEY = \"active_theme\"\nTHEME_QUERY_PARAM = \"theme\"\nTHEME_LIGHT = \"light\"\nTHEME_DARK = \"dark\"\nVALID_THEMES = {THEME_LIGHT, THEME_DARK}\n\n\ndef _normalize_theme(value: Optional[str]) -> Optional[str]:\n    if not value:\n        return None\n    value = value.lower()\n    if value in VALID_THEMES:\n        return value\n    return None\n\n\ndef resolve_theme_from_query(request: Request) -> Optional[str]:\n    \"\"\"\n    Resolve theme from query parameter override.\n    \"\"\"\n    theme = request.args.get(THEME_QUERY_PARAM)\n    return _normalize_theme(theme)\n\n\ndef resolve_theme_from_session() -> Optional[str]:\n    \"\"\"\n    Resolve theme from session stored theme.\n    \"\"\"\n    theme = session.get(THEME_SESSION_KEY)\n    return _normalize_theme(theme)\n\n\ndef resolve_theme_from_headers(request: Request) -> Optional[str]:\n    \"\"\"\n    Resolve theme from request headers 'Sec-CH-Prefers-Color-Scheme' or 'Prefers-Color-Scheme'.\n    \"\"\"\n    # Prefer the Client Hint header first\n    theme = request.headers.get(\"Sec-CH-Prefers-Color-Scheme\")\n    if not theme:\n        theme = request.headers.get(\"Prefers-Color-Scheme\")\n    return _normalize_theme(theme)\n\n\ndef resolve_active_theme(request: Request) -> str:\n    \"\"\"\n    Resolve the active theme in order:\n    1. Query parameter override\n    2. Session stored theme\n    3. Request header preference\n    4. Default to light\n    \"\"\"\n    theme = resolve_theme_from_query(request)\n    if theme:\n        return theme\n\n    theme = resolve_theme_from_session()\n    if theme:\n        return theme\n\n    theme = resolve_theme_from_headers(request)\n    if theme:\n        return theme\n\n    return THEME_LIGHT\n\n\ndef update_session_theme(new_theme: str) -> None:\n    \"\"\"\n    Update the session theme based on user toggle.\n    \"\"\"\n    normalized = _normalize_theme(new_theme)\n    if normalized:\n        session[THEME_SESSION_KEY] = normalized\n    else:\n        # Remove theme if invalid or None\n        session.pop(THEME_SESSION_KEY, None)\n\n\ndef get_active_theme_palette(request: Request) -> Dict[str, Any]:\n    \"\"\"\n    Get the active theme palette dictionary from theme_palettes.py.\n    \"\"\"\n    active_theme = resolve_active_theme(request)\n    palette = theme_palettes.get_palette(active_theme)\n    return palette",
+      "presentation/web_ui.py": "import os\nfrom dotenv import load_dotenv\nfrom flask import Flask, session, redirect, url_for, request, render_template_string\nimport theme_resolver\nimport theme_palettes\n\nload_dotenv()\n\napp = Flask(__name__)\napp.secret_key = os.getenv(\"FLASK_SECRET_KEY\", \"supersecretkey\")  # Ensure to set a secure secret key in production\n\n\ndef get_demo_interface() -> str:\n    \"\"\"Generate the HTML for the interactive demo interface with database selection.\"\"\"\n\n    api_key = os.getenv(\"APP_API_KEY\", \"\")\n\n    if not api_key:\n        return \"\"\"\n        <!DOCTYPE html>\n        <html>\n        <body style=\"font-family: Arial, sans-serif; text-align: center; margin-top: 100px;\">\n            <h1 style=\"color: red;\">Configuration Error</h1>\n            <p>APP_API_KEY is not configured in environment variables.</p>\n            <p>Please set APP_API_KEY in your .env file and restart the server.</p>\n        </body>\n        </html>\n        \"\"\"\n\n    # Determine active theme and palette\n    active_theme = theme_resolver.resolve_theme(session)\n    palette = theme_palettes.get_palette(active_theme)\n\n    # The HTML content with palette colors injected into CSS variables for usage in styles\n    html_content = f\"\"\"<!DOCTYPE html>\n<html>\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Multi-Database Query Agent</title>\n    <script src=\"https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js\"></script>\n    <script src=\"https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js\"></script>\n    <link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css\">\n    <style>\n        :root {{\n            --color-background: {palette['background']};\n            --color-primary: {palette['primary']};\n            --color-primary-hover: {palette['primary_hover']};\n            --color-text-primary: {palette['text_primary']};\n            --color-text-secondary: {palette['text_secondary']};\n            --color-border: {palette['border']};\n            --color-error-bg: {palette['error_bg']};\n            --color-error-border: {palette['error_border']};\n            --color-warning-bg: {palette['warning_bg']};\n            --color-warning-border: {palette['warning_border']};\n            --color-success: {palette['success']};\n            --color-database-postgresql-bg: {palette['database_postgresql_bg']};\n            --color-database-postgresql-text: {palette['database_postgresql_text']};\n            --color-database-mongodb-bg: {palette['database_mongodb_bg']};\n            --color-database-mongodb-text: {palette['database_mongodb_text']};\n            --color-tip-bg: {palette['tip_bg']};\n            --color-tip-text: {palette['tip_text']};\n        }}\n        body {{ \n            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; \n            max-width: 1200px; margin: 0 auto; padding: 20px; background: var(--color-background);\n            color: var(--color-text-primary);\n        }}\n        .header {{ text-align: center; margin-bottom: 30px; }}\n        .database-selector {{\n            background: white; padding: 20px; border-radius: 8px; margin: 20px 0;\n            box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n        }}\n        .database-grid {{\n            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));\n            gap: 15px; margin-top: 15px;\n        }}\n        .database-card {{\n            border: 2px solid var(--color-border); border-radius: 8px; padding: 15px;\n            cursor: pointer; transition: all 0.3s; background: #fafbfc;\n            margin-bottom: 8px;\n            color: var(--color-text-primary);\n        }}\n        .database-card:hover {{\n            border-color: var(--color-primary); background: #f0f7ff;\n            transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1);\n        }}\n        .database-card.selected {{\n            border-color: var(--color-primary); background: #e7f3ff;\n            box-shadow: 0 0 0 3px rgba(0,102,204,0.2);\n        }}\n        .database-name {{\n            font-weight: 600; font-size: 18px; margin-bottom: 5px;\n            color: var(--color-primary);\n        }}\n        .database-type {{\n            display: inline-block; padding: 3px 8px; border-radius: 12px;\n            font-size: 12px; font-weight: 500; margin-bottom: 8px;\n            color: white;\n        }}\n        .database-type.postgresql {{\n            background: var(--color-database-postgresql-bg); color: var(--color-database-postgresql-text);\n        }}\n        .database-type.mongodb {{\n            background: var(--color-database-mongodb-bg); color: var(--color-database-mongodb-text);\n        }}\n        .database-info {{\n            color: var(--color-text-secondary); font-size: 14px; line-height: 1.4;\n        }}\n        .database-status {{\n            margin-top: 8px; font-size: 12px;\n        }}\n        .status-connected {{ color: var(--color-success); }}\n        .status-error {{ color: var(--color-error-border); }}\n        .examples {{ \n            background: white; padding: 20px; border-radius: 8px; margin: 20px 0; \n            box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n        }}\n        .input-section {{ \n            background: white; padding: 20px; border-radius: 8px; margin: 20px 0;\n            box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n        }}\n        .selected-db-indicator {{\n            background: #e7f3ff; padding: 10px 15px; border-radius: 6px;\n            margin-bottom: 15px; display: none; align-items: center; gap: 10px;\n            color: var(--color-primary);\n        }}\n        .selected-db-indicator.visible {{ display: flex; }}\n        .chat {{ \n            background: white; border-radius: 8px; height: 500px; \n            padding: 20px; overflow-y: auto; margin: 20px 0;\n            box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n            color: var(--color-text-primary);\n        }}\n        .input-row {{ display: flex; gap: 10px; align-items: center; }}\n        #question {{ \n            flex: 1; padding: 12px; border: 2px solid var(--color-border); border-radius: 6px;\n            font-size: 16px; outline: none; color: var(--color-text-primary);\n            background: white;\n        }}\n        #question:focus {{ border-color: var(--color-primary); }}\n        #question:disabled {{ background: #f5f5f5; cursor: not-allowed; color: var(--color-text-secondary); }}\n        button {{ \n            padding: 12px 24px; background: var(--color-primary); color: white; border: none;\n            border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 600;\n            transition: background 0.2s;\n        }}\n        button:hover:not(:disabled) {{ background: var(--color-primary-hover); }}\n        button:disabled {{ background: #ccc; cursor: not-allowed; }}\n        .user-message {{ \n            background: var(--color-primary); color: white; padding: 12px 16px; \n            margin: 10px 0; border-radius: 18px 18px 4px 18px; max-width: 80%;\n            word-wrap: break-word;\n        }}\n        .agent-message {{ \n            background: #f1f3f5; padding: 16px; margin: 10px 0; \n            border-radius: 18px 18px 18px 4px; max-width: 90%;\n            word-wrap: break-word;\n            color: var(--color-text-primary);\n        }}\n        .loading {{ \n            background: var(--color-warning-bg); padding: 12px; border-radius: 8px; \n            border-left: 4px solid var(--color-warning-border); margin: 10px 0;\n            color: var(--color-text-primary);\n        }}\n        .error {{ \n            background: var(--color-error-bg); padding: 16px; border-radius: 8px; \n            border-left: 4px solid var(--color-error-border); margin: 10px 0; color: #721c24;\n        }}\n        .error-details {{\n            background: #f8f9fa; padding: 12px; border-radius: 4px;\n            margin-top: 10px; font-family: monospace; font-size: 12px;\n            border: 1px solid var(--color-border); white-space: pre-wrap;\n            max-height: 300px; overflow-y: auto;\n            color: var(--color-text-primary);\n        }}\n        .error-summary {{\n            font-weight: bold; margin-bottom: 10px;\n        }}\n        .error-expandable {{\n            cursor: pointer; color: var(--color-primary); text-decoration: underline;\n            font-size: 12px; margin-top: 8px;\n        }}\n        .error-expandable:hover {{ color: var(--color-primary-hover); }}\n        .query-error {{\n            background: var(--color-warning-bg); padding: 15px; border-radius: 8px; \n            border-left: 4px solid var(--color-warning-border); margin: 15px 0; color: #856404;\n        }}\n        table {{ \n            width: 100%; border-collapse: collapse; margin: 15px 0; \n            background: white; border-radius: 6px; overflow: hidden;\n            box-shadow: 0 1px 3px rgba(0,0,0,0.1);\n        }}\n        th, td {{ \n            padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--color-border); \n            word-wrap: break-word;\n            color: var(--color-text-primary);\n        }}\n        th {{ background: #f8f9fa; font-weight: 600; color: #495057; }}\n        tr:hover {{ background: #f8f9fa; }}\n        code {{ \n            background: #f1f3f5; padding: 2px 6px; border-radius: 4px; \n            font-family: 'Monaco', 'Consolas', monospace; font-size: 14px;\n            color: var(--color-text-primary);\n        }}\n        pre {{ \n            background: #f8f9fa; padding: 16px; border-radius: 6px; \n            overflow-x: auto; border: 1px solid var(--color-border); margin: 15px 0;\n            white-space: pre-wrap; line-height:"
     },
     "relevant_files": [],
     "code_patterns": []
   },
   "testing": {
     "test_files": [
-      "tests/test_theme.js"
+      "tests/unit/test_theme_resolver.py"
     ],
     "test_results": {
       "total_tests": 1,
@@ -213,7 +192,7 @@
     {
       "agent": "Orchestrator",
       "action": "Analysis complete",
-      "result": "Complexity: complex, Criteria: 9",
+      "result": "Complexity: medium, Criteria: 5",
       "success": true,
       "state": "analyzing"
     },
@@ -227,7 +206,7 @@
     {
       "agent": "Orchestrator",
       "action": "Execution plan created",
-      "result": "8 steps, Branch: feature/story-9",
+      "result": "4 steps, Branch: feature/dark-light-theme-toggle",
       "success": true,
       "state": "planning"
     },
@@ -241,161 +220,98 @@
     {
       "agent": "DevOps",
       "action": "Creating feature branch",
-      "result": "feature/story-9",
+      "result": "feature/dark-light-theme-toggle",
       "success": true,
       "state": "planning"
     },
     {
       "agent": "DevOps",
       "action": "Branch created",
-      "result": "feature/story-9",
+      "result": "feature/dark-light-theme-toggle",
       "success": true,
       "state": "creating_branch"
     },
     {
       "agent": "CodeAgent",
       "action": "Executing step 1",
-      "result": "Create CSS custom properties for dark and light themes in a dedicated stylesheet, ensuring color palettes meet WCAG 2.1 AA contrast standards and include smooth transition animations with a media query to disable animations for motion-sensitive users.",
+      "result": "Define light and dark theme color palettes as Python constants for reuse across the backend and templates.",
       "success": true,
       "state": "creating_branch"
     },
     {
       "agent": "CodeAgent",
       "action": "Creating file",
-      "result": "src/styles/theme.css",
+      "result": "presentation/theme_palettes.py",
       "success": true,
       "state": "implementing"
     },
     {
       "agent": "CodeAgent",
       "action": "File created",
-      "result": "src/styles/theme.css (1173 chars)",
+      "result": "presentation/theme_palettes.py (2917 chars)",
       "success": true,
       "state": "implementing"
     },
     {
       "agent": "CodeAgent",
       "action": "Executing step 2",
-      "result": "Develop a theme detection utility that detects the user's system theme preference on first visit and falls back gracefully if CSS custom properties are unsupported.",
+      "result": "Implement a theme resolver helper to determine the active theme based on session data, request hints (e.g., 'prefers-color-scheme' header), and query parameters, defaulting to light theme.",
       "success": true,
       "state": "implementing"
     },
     {
       "agent": "CodeAgent",
       "action": "Creating file",
-      "result": "src/utils/themeDetection.js",
+      "result": "presentation/helpers/theme_resolver.py",
       "success": true,
       "state": "implementing"
     },
     {
       "agent": "CodeAgent",
       "action": "File created",
-      "result": "src/utils/themeDetection.js (1134 chars)",
+      "result": "presentation/helpers/theme_resolver.py (2406 chars)",
       "success": true,
       "state": "implementing"
     },
     {
       "agent": "CodeAgent",
       "action": "Executing step 3",
-      "result": "Implement a React hook to manage theme state, including persistence of user preference in localStorage and fallback to system preference on initial load.",
+      "result": "Modify presentation/web_ui.py to integrate the theme resolver helper, inject the active theme palette into template rendering context, and add a server-side toggle endpoint to switch themes updating the session.",
       "success": true,
       "state": "implementing"
     },
     {
       "agent": "CodeAgent",
-      "action": "Creating file",
-      "result": "src/hooks/useThemePersistence.js",
+      "action": "Updating file",
+      "result": "presentation/web_ui.py",
       "success": true,
       "state": "implementing"
     },
     {
       "agent": "CodeAgent",
-      "action": "File created",
-      "result": "src/hooks/useThemePersistence.js (1820 chars)",
-      "success": true,
-      "state": "implementing"
-    },
-    {
-      "agent": "CodeAgent",
-      "action": "Executing step 4",
-      "result": "Create a ThemeToggle React component that allows users to manually switch themes, updates the theme state, and persists the preference.",
-      "success": true,
-      "state": "implementing"
-    },
-    {
-      "agent": "CodeAgent",
-      "action": "Creating file",
-      "result": "src/components/ThemeToggle.js",
-      "success": true,
-      "state": "implementing"
-    },
-    {
-      "agent": "CodeAgent",
-      "action": "File created",
-      "result": "src/components/ThemeToggle.js (1555 chars)",
-      "success": true,
-      "state": "implementing"
-    },
-    {
-      "agent": "CodeAgent",
-      "action": "Executing step 5",
-      "result": "Refactor QueryEditorSyntaxHighlighting component to adapt its styles dynamically based on the current theme using CSS custom properties.",
-      "success": true,
-      "state": "implementing"
-    },
-    {
-      "agent": "CodeAgent",
-      "action": "Creating file",
-      "result": "src/components/QueryEditorSyntaxHighlighting.js",
-      "success": true,
-      "state": "implementing"
-    },
-    {
-      "agent": "CodeAgent",
-      "action": "File created",
-      "result": "src/components/QueryEditorSyntaxHighlighting.js (4177 chars)",
-      "success": true,
-      "state": "implementing"
-    },
-    {
-      "agent": "CodeAgent",
-      "action": "Executing step 6",
-      "result": "Develop DataVisualizationThemeAdapter component or utility to ensure all data visualizations adapt their color schemes according to the active theme.",
-      "success": true,
-      "state": "implementing"
-    },
-    {
-      "agent": "CodeAgent",
-      "action": "Creating file",
-      "result": "src/components/DataVisualizationThemeAdapter.js",
-      "success": true,
-      "state": "implementing"
-    },
-    {
-      "agent": "CodeAgent",
-      "action": "File created",
-      "result": "src/components/DataVisualizationThemeAdapter.js (2554 chars)",
+      "action": "File updated",
+      "result": "presentation/web_ui.py (9575 chars)",
       "success": true,
       "state": "implementing"
     },
     {
       "agent": "TestAgent",
-      "action": "Executing step 8",
-      "result": "Conduct comprehensive testing including visual tests, accessibility audits for color contrast, browser compatibility checks for CSS custom properties, persistence validation, and performance testing of theme transitions.",
+      "action": "Executing step 6",
+      "result": "Write comprehensive unit tests for the theme resolver helper covering default theme fallback, detection from request headers, query parameter overrides, and session persistence.",
       "success": true,
       "state": "implementing"
     },
     {
       "agent": "TestAgent",
       "action": "Creating test file",
-      "result": "tests/test_theme.js",
+      "result": "tests/unit/test_theme_resolver.py",
       "success": true,
       "state": "testing"
     },
     {
       "agent": "TestAgent",
       "action": "Test file created",
-      "result": "tests/test_theme.js (10631 chars)",
+      "result": "tests/unit/test_theme_resolver.py (8215 chars)",
       "success": true,
       "state": "testing"
     },

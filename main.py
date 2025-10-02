@@ -22,14 +22,16 @@ class MultiAgentSystem:
         self.rag = CodebaseRAG(
             config.repository_path,
             self.ai_client,
-            config.rag_persist_directory
+            config.rag_persist_directory,
+            config.embedding_deployment_name
         )
         
         # Initialize agents
         self.orchestrator = OrchestratorAgent(
             self.ai_client,
             config.deployment_name,
-            self.mcp_manager
+            self.mcp_manager,
+            self.rag
         )
         
         self.devops_agent = DevOpsAgent(
@@ -65,6 +67,7 @@ class MultiAgentSystem:
         
         print("Indexing codebase...")
         self.rag.index_repository()
+        self.orchestrator.refresh_project_context()
         
         print("\n✓ All agents initialized")
     

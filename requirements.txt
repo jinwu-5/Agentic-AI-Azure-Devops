@@ -6,6 +6,7 @@ azure-identity>=1.15.0
 python-dotenv>=1.0.0
 
 # RAG & Embeddings
+numpy>=1.26.0
 chromadb>=0.4.22
 sentence-transformers>=2.3.1
 langchain>=0.1.0
