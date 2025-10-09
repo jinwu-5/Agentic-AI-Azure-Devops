@@ -95,31 +95,31 @@ class CodeAgent(BaseAgent):
                          rag_context: str) -> bool:
         """Create a new file with AI-generated content"""
         self.log(context, "Creating file", file_path)
-        
+
         structure = self.rag.get_project_structure()
-        
+
         system_prompt = """You are an expert software engineer writing production-quality code.
 
-Write COMPLETE, working code - not pseudocode or placeholders."""
+            Write COMPLETE, working code - not pseudocode or placeholders."""
 
         instructions_text = '\n'.join(f"- {item}" for item in instructions)
 
         user_prompt = f"""Create a complete implementation for this file:
 
-File: {file_path}
-Purpose: {description}
-
-Work Item: {context.work_item_title}
-
-Implementation Notes:
-{instructions_text}
-
-Project Context:
-- File types in project: {list(structure['file_types'].keys())}
-
-{rag_context}
-
-Respond with ONLY the file content, no explanations."""
+            File: {file_path}
+            Purpose: {description}
+            
+            Work Item: {context.work_item_title}
+            
+            Implementation Notes:
+            {instructions_text}
+            
+            Project Context:
+            - File types in project: {list(structure['file_types'].keys())}
+            
+            {rag_context}
+            
+            Respond with ONLY the file content, no explanations."""
 
         try:
             code_content = await self.call_ai(system_prompt, user_prompt,
@@ -173,27 +173,27 @@ Respond with ONLY the file content, no explanations."""
         structure = self.rag.get_project_structure()
 
         system_prompt = """You are an expert software engineer editing an existing file.
-Apply the requested changes while preserving intended behaviour. Return the full updated file content."""
+            Apply the requested changes while preserving intended behaviour. Return the full updated file content."""
 
         user_prompt = f"""Update the existing file according to the following instructions:
 
-File: {file_path}
-Purpose: {description}
-
-Work Item: {context.work_item_title}
-
-Implementation Notes:
-{instructions_text}
-
-Current Content:
-{current_content}
-
-Project Context:
-- File types in project: {list(structure['file_types'].keys())}
-
-{rag_context}
-
-Respond with ONLY the updated file content, no explanations."""
+            File: {file_path}
+            Purpose: {description}
+            
+            Work Item: {context.work_item_title}
+            
+            Implementation Notes:
+            {instructions_text}
+            
+            Current Content:
+            {current_content}
+            
+            Project Context:
+            - File types in project: {list(structure['file_types'].keys())}
+            
+            {rag_context}
+            
+            Respond with ONLY the updated file content, no explanations."""
 
         try:
             updated_content = await self.call_ai(system_prompt, user_prompt,

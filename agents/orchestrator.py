@@ -194,12 +194,12 @@ class OrchestratorAgent(BaseAgent):
         
         system_prompt = """You are a senior software architect analyzing user stories.
 
-Extract and analyze:
-1. Technical requirements
-2. Acceptance criteria (specific, testable)
-3. Complexity (simple/medium/complex)
-4. Risks and challenges
-5. Implementation approach"""
+            Extract and analyze:
+            1. Technical requirements
+            2. Acceptance criteria (specific, testable)
+            3. Complexity (simple/medium/complex)
+            4. Risks and challenges
+            5. Implementation approach"""
 
         project_summary = (
             f"Primary language: {self._project_context.get('primary_language')}\n"
@@ -214,26 +214,26 @@ Extract and analyze:
 
         user_prompt = f"""Analyze this work item:
 
-Title: {context.work_item_title}
-
-Description: {context.work_item_description}
-
-Project Summary:
-{project_summary}
-
-Python module locations:
-{python_dirs}
-
-Provide analysis in JSON:
-{{
-    "summary": "Brief summary",
-    "technical_requirements": ["req1", "req2"],
-    "acceptance_criteria": ["criteria1", "criteria2"],
-    "complexity": "simple|medium|complex",
-    "risks": ["risk1"],
-    "recommended_approach": "Implementation strategy",
-    "estimated_files": ["src/styles/theme.css", "src/utils/themeToggle.js"]
-}}"""
+            Title: {context.work_item_title}
+            
+            Description: {context.work_item_description}
+            
+            Project Summary:
+            {project_summary}
+            
+            Python module locations:
+            {python_dirs}
+            
+            Provide analysis in JSON:
+            {{
+                "summary": "Brief summary",
+                "technical_requirements": ["req1", "req2"],
+                "acceptance_criteria": ["criteria1", "criteria2"],
+                "complexity": "simple|medium|complex",
+                "risks": ["risk1"],
+                "recommended_approach": "Implementation strategy",
+                "estimated_files": ["src/styles/theme.css", "src/utils/themeToggle.js"]
+            }}"""
 
         try:
             ai_response = await self.call_ai(system_prompt, user_prompt, temperature=0.2)
@@ -267,18 +267,18 @@ Provide analysis in JSON:
         
         system_prompt = """You are a technical project manager creating execution plans.
 
-Create actionable plans for specialized AI agents (DevOps, Code, Test).
-
-IMPORTANT - File Organization:
-- CSS files go in: src/styles/
-- JavaScript/React files go in: src/components/ or src/utils/
-- Test files go in: tests/
-- Always use proper directory structure
-
-Planning Output Requirements:
-- Use "files_to_create" for brand new files and include an "instructions" array describing their purpose
-- Use "files_to_update" for existing files, provide "path" plus bullet "instructions" outlining the exact edits
-- Every CodeAgent step must reference at least one file in "files_to_create" or "files_to_update"""
+            Create actionable plans for specialized AI agents (DevOps, Code, Test).
+            
+            IMPORTANT - File Organization:
+            - CSS files go in: src/styles/
+            - JavaScript/React files go in: src/components/ or src/utils/
+            - Test files go in: tests/
+            - Always use proper directory structure
+            
+            Planning Output Requirements:
+            - Use "files_to_create" for brand new files and include an "instructions" array describing their purpose
+            - Use "files_to_update" for existing files, provide "path" plus bullet "instructions" outlining the exact edits
+            - Every CodeAgent step must reference at least one file in "files_to_create" or "files_to_update"""
 
         allowed_exts: Set[str] = self._project_context.get("allowed_extensions", set())
         if allowed_exts:
@@ -298,58 +298,58 @@ Planning Output Requirements:
 
         user_prompt = f"""Create plan for:
 
-Title: {context.work_item_title}
-Description: {context.work_item_description}
-
-Analysis:
-{json.dumps(analysis, indent=2)}
-
-Project Summary:
-Primary language: {self._project_context.get('primary_language')}
-Frameworks: {', '.join(self._project_context.get('frameworks', [])) or 'None'}
-Total files indexed: {self._project_context.get('total_files')}
-Common file types: {', '.join(self._project_context.get('file_types', {}).keys()) or 'Unknown'}
-
-Python module directories to target:
-{python_dirs}
-
-Representative Python files:
-{sample_files}
-
-Provide plan in JSON with PROPER FILE PATHS:
-{{
-    "branch_name": "feature/story-{context.work_item_id}",
-    "implementation_steps": [
-        {{
-            "step": 1,
-            "description": "What to do",
-            "agent": "CodeAgent",
-            "files_to_create": [
-                {{
-                    "path": "presentation/theme_palettes.py",
-                    "instructions": [
-                        "Define LIGHT_THEME and DARK_THEME dictionaries with WCAG-compliant colours"
-                    ]
-                }}
-            ],
-            "files_to_update": [
-                {{
-                    "path": "presentation/web_ui.py",
-                    "instructions": [
-                        "Inject theme resolver helper into render flow",
-                        "Add session-backed toggle endpoint"
-                    ]
-                }}
-            ],
-            "validation": "How to verify"
-        }}
-    ],
-    "testing_strategy": {{
-        "unit_tests": ["tests/test_theme_resolver.py"],
-        "integration_tests": ["tests/test_web_ui.py"]
-    }},
-    "pr_description": "PR description"
-}}"""
+            Title: {context.work_item_title}
+            Description: {context.work_item_description}
+            
+            Analysis:
+            {json.dumps(analysis, indent=2)}
+            
+            Project Summary:
+            Primary language: {self._project_context.get('primary_language')}
+            Frameworks: {', '.join(self._project_context.get('frameworks', [])) or 'None'}
+            Total files indexed: {self._project_context.get('total_files')}
+            Common file types: {', '.join(self._project_context.get('file_types', {}).keys()) or 'Unknown'}
+            
+            Python module directories to target:
+            {python_dirs}
+            
+            Representative Python files:
+            {sample_files}
+            
+            Provide plan in JSON with PROPER FILE PATHS:
+            {{
+                "branch_name": "feature/story-{context.work_item_id}",
+                "implementation_steps": [
+                    {{
+                        "step": 1,
+                        "description": "What to do",
+                        "agent": "CodeAgent",
+                        "files_to_create": [
+                            {{
+                                "path": "presentation/theme_palettes.py",
+                                "instructions": [
+                                    "Define LIGHT_THEME and DARK_THEME dictionaries with WCAG-compliant colours"
+                                ]
+                            }}
+                        ],
+                        "files_to_update": [
+                            {{
+                                "path": "presentation/web_ui.py",
+                                "instructions": [
+                                    "Inject theme resolver helper into render flow",
+                                    "Add session-backed toggle endpoint"
+                                ]
+                            }}
+                        ],
+                        "validation": "How to verify"
+                    }}
+                ],
+                "testing_strategy": {{
+                    "unit_tests": ["tests/test_theme_resolver.py"],
+                    "integration_tests": ["tests/test_web_ui.py"]
+                }},
+                "pr_description": "PR description"
+            }}"""
 
         try:
             ai_response = await self.call_ai(system_prompt, user_prompt, 

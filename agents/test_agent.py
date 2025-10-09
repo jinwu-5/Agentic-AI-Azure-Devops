@@ -82,38 +82,38 @@ class TestAgent(BaseAgent):
         
         system_prompt = """You are a QA engineer writing comprehensive unit tests.
 
-Write tests that:
-1. Cover all major functionality
-2. Test edge cases and error conditions
-3. Are clear and maintainable
-4. Use appropriate testing frameworks
-5. Include setup/teardown as needed
-
-Write COMPLETE, runnable tests."""
+            Write tests that:
+            1. Cover all major functionality
+            2. Test edge cases and error conditions
+            3. Are clear and maintainable
+            4. Use appropriate testing frameworks
+            5. Include setup/teardown as needed
+            
+            Write COMPLETE, runnable tests."""
 
         user_prompt = f"""Create unit tests for this implementation:
 
-Test File: {file_path}
-Purpose: {description}
-
-Implementation Notes:
-{instructions_text}
-
-Implemented Code:
-{implemented_files}
-
-Work Item: {context.work_item_title}
-Acceptance Criteria:
-{chr(10).join(f'- {c}' for c in context.acceptance_criteria[:5])}
-
-Generate COMPLETE test file. Include:
-- All necessary imports
-- Test setup/teardown
-- Comprehensive test cases
-- Clear assertions
-- Comments explaining what's being tested
-
-Respond with ONLY the test file content."""
+            Test File: {file_path}
+            Purpose: {description}
+            
+            Implementation Notes:
+            {instructions_text}
+            
+            Implemented Code:
+            {implemented_files}
+            
+            Work Item: {context.work_item_title}
+            Acceptance Criteria:
+            {chr(10).join(f'- {c}' for c in context.acceptance_criteria[:5])}
+            
+            Generate COMPLETE test file. Include:
+            - All necessary imports
+            - Test setup/teardown
+            - Comprehensive test cases
+            - Clear assertions
+            - Comments explaining what's being tested
+            
+            Respond with ONLY the test file content."""
 
         try:
             test_content = await self.call_ai(system_prompt, user_prompt,

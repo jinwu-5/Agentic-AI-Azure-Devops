@@ -120,13 +120,13 @@ class DevOpsAgent(BaseAgent):
         """Use AI to generate a descriptive commit message"""
         
         system_prompt = """You are a Git commit message expert.
-Generate clear, concise commit messages following conventional commits format.
-
-Format: <type>: <description>
-
-Types: feat, fix, refactor, docs, test, style, chore
-
-Keep messages under 72 characters for the subject line."""
+            Generate clear, concise commit messages following conventional commits format.
+            
+            Format: <type>: <description>
+            
+            Types: feat, fix, refactor, docs, test, style, chore
+            
+            Keep messages under 72 characters for the subject line."""
 
         file_list = "\n".join([f"- {f}" for f in files[:10]])
         if len(files) > 10:
@@ -134,14 +134,14 @@ Keep messages under 72 characters for the subject line."""
         
         user_prompt = f"""Generate a commit message for:
 
-Work Item: {context.work_item_title}
-
-Files changed:
-{file_list}
-
-Description: {context.work_item_description[:200]}
-
-Respond with just the commit message, no explanation."""
+            Work Item: {context.work_item_title}
+            
+            Files changed:
+            {file_list}
+            
+            Description: {context.work_item_description[:200]}
+            
+            Respond with just the commit message, no explanation."""
 
         try:
             response = await self.call_ai(system_prompt, user_prompt, temperature=0.3)
