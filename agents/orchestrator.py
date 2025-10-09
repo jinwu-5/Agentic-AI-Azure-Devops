@@ -1,7 +1,3 @@
-"""
-STEP 2: Orchestrator Agent - With improved file organization
-"""
-
 from core import BaseAgent, WorkflowContext, AgentState
 from services import CodebaseRAG
 from typing import Dict, Any, List, Optional, Set

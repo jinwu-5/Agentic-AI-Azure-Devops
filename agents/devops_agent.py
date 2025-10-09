@@ -1,8 +1,3 @@
-"""
-STEP 3: DevOps Agent
-Handles Git operations and Azure DevOps interactions
-"""
-
 from core import BaseAgent, WorkflowContext, AgentState
 from typing import Dict, Any, List
 import git

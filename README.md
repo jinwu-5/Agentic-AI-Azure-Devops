@@ -102,10 +102,7 @@ This will:
 ### Test Individual Agents (Cost Efficient)
 
     # Save initial state once (expensive)
-    python run_full_workflow.py
-
-    # Then iterate on individual agents (cheap)
-    python test_code_agent.py    # Test code generation
+    python run_complete_workflow.py
 
     # Manage saved states
     python manage_states.py list
@@ -147,9 +144,8 @@ This will:
 - **MCP connection failures** → Ensure Node.js is installed, MCP servers install automatically via `npx`  
 
 ## Future Enhancements
-- Improve language/framework detection from codebase (Implement Azure OpenAI embeddings for better RAG )
-- Add LangGraph for complex workflow orchestration
-- Remove all human-in-the-loop approval gates unless unresolvable error occurs
+- Add LangGraph for complex workflow orchestration to try to improve code generation quality
+- Complete flow end to end (PR creation) and remove all human-in-the-loop approval gates unless unresolvable error occurs
+- Pull the code repo directly from Azure DevOps 
 - Implement test driven development as an option 
 - Move agent interactions creation into docker
-

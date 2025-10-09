@@ -9,7 +9,7 @@ class MCPConnectionManager:
     def __init__(self):
         self.connections: Dict[str, Dict] = {}
         self.request_ids: Dict[str, int] = {}
-        self.base_paths: Dict[str, str] = {}  # Track base paths
+        self.base_paths: Dict[str, str] = {}
     
     async def start_azure_devops_mcp(self, org_url: str, pat: str, project: str) -> bool:
         """Start Azure DevOps MCP server"""

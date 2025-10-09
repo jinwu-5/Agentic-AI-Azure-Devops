@@ -1,8 +1,3 @@
-"""
-STEP 6: Test Agent
-Generates and runs unit tests for implemented code
-"""
-
 from core import BaseAgent, WorkflowContext, AgentState
 from typing import Dict, Any, List
 import os

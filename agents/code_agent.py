@@ -1,7 +1,3 @@
-"""
-STEP 5: Code Agent - Using direct file operations instead of MCP
-"""
-
 from core import BaseAgent, WorkflowContext, AgentState
 from typing import Dict, Any, List
 import os
