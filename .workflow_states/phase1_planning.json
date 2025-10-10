@@ -1,15 +1,15 @@
 {
-  "saved_at": "2025-10-01T22:36:56.884372",
+  "saved_at": "2025-10-09T22:54:02.421698",
   "work_item": {
     "id": "9",
     "title": "Dark/Light Theme Implementation",
-    "description": "\ud83d\udea9 AC Addressed (Required) Introduce light/dark theme selection entirely within the existing Python-rendered web UI (presentation/web_ui.py and helpers). Ensure query syntax highlighting and result panels remain legible under both themes. Persist the user\u2019s theme choice across requests within the active session (no browser-only storage). \ud83d\udca1 What do you want to accomplish? (Required) Develop a theme system driven by Python: define colour palettes as backend constants/config, inject them into the current templates, and expose a server-side toggle. On first visit, respect the user\u2019s preferred colour scheme when available (e.g., via request hints or explicit query parameter) and fall back to light. \ud83d\udccb Testability Considerations (Required) Unit tests for the theme resolver helper (default, system hint, manual override).",
+    "description": "\ud83d\udea9 AC Addressed (Required) Introduce light/dark theme selection entirely within the existing Python-rendered web UI (presentation/web_ui.py and helpers). You should make update to css in web_ui.py directly. Ensure query syntax highlighting and result panels remain legible under both themes. Persist the user\u2019s theme choice across requests using local storage. \ud83d\udca1 What do you want to accomplish? (Required) Improve user experience by allow users to toggle between dark/light themes. \ud83d\udccb Testability Considerations (Required) Unit tests for the web_ui.py to check the new dark/light theme functionality.",
     "acceptance_criteria": [
-      "User can toggle between light and dark themes via a server-side toggle exposed in the UI.",
-      "Theme selection persists across multiple requests within the same session without using browser-only storage mechanisms like localStorage or cookies.",
-      "On first visit, if user preference is indicated via request headers or query parameters, the UI respects and applies that theme; otherwise, defaults to light theme.",
-      "Query syntax highlighting and result panels are clearly legible and visually appropriate in both themes.",
-      "Unit tests exist and pass for the theme resolver helper, validating default theme, system preference detection, and manual override scenarios."
+      "Users can toggle between dark and light themes via the web UI.",
+      "The CSS updates in web_ui.py correctly apply styles for both themes.",
+      "Query syntax highlighting and result panels remain readable in both themes.",
+      "User\u2019s theme preference is saved in local storage and persists across page reloads.",
+      "Unit tests cover the theme toggle functionality and CSS application."
     ]
   },
   "git": {
@@ -27,37 +27,31 @@
       "story_points": null
     },
     "analysis": {
-      "summary": "Implement a backend-driven light/dark theme toggle within the existing Python-rendered web UI, ensuring UI elements remain legible, persisting user choice in session, and respecting user preference on first visit.",
+      "summary": "Implement a toggleable dark/light theme within the existing Python-rendered web UI by updating CSS directly in web_ui.py, ensuring syntax highlighting and result panels remain legible, and persisting user preference using local storage.",
       "technical_requirements": [
-        "Define color palettes for light and dark themes as Python backend constants or configuration.",
-        "Inject theme colors into existing templates rendered by presentation/web_ui.py and helpers.",
-        "Implement server-side toggle to switch themes during active session without relying on browser-only storage.",
-        "Persist user theme choice across requests within the active session (e.g., server-side session storage).",
-        "On first visit, detect and respect user preferred color scheme via request hints or explicit query parameter, defaulting to light theme if unavailable.",
-        "Ensure query syntax highlighting and result panels remain legible and visually consistent under both themes.",
-        "Develop unit tests for the theme resolver helper covering default behavior, system preference detection, and manual override."
+        "Add light/dark theme selection functionality within presentation/web_ui.py and helpers.",
+        "Update CSS styles directly in web_ui.py to support both themes.",
+        "Ensure query syntax highlighting and result panels are legible in both themes.",
+        "Persist user\u2019s theme choice across requests using browser local storage.",
+        "Add unit tests in web_ui.py to verify dark/light theme functionality."
       ],
       "acceptance_criteria": [
-        "User can toggle between light and dark themes via a server-side toggle exposed in the UI.",
-        "Theme selection persists across multiple requests within the same session without using browser-only storage mechanisms like localStorage or cookies.",
-        "On first visit, if user preference is indicated via request headers or query parameters, the UI respects and applies that theme; otherwise, defaults to light theme.",
-        "Query syntax highlighting and result panels are clearly legible and visually appropriate in both themes.",
-        "Unit tests exist and pass for the theme resolver helper, validating default theme, system preference detection, and manual override scenarios."
+        "Users can toggle between dark and light themes via the web UI.",
+        "The CSS updates in web_ui.py correctly apply styles for both themes.",
+        "Query syntax highlighting and result panels remain readable in both themes.",
+        "User\u2019s theme preference is saved in local storage and persists across page reloads.",
+        "Unit tests cover the theme toggle functionality and CSS application."
       ],
       "complexity": "medium",
       "risks": [
-        "Ensuring all UI elements, especially syntax highlighting and result panels, maintain legibility and accessibility in both themes.",
-        "Persisting theme choice solely on server-side session without browser storage may require session management adjustments.",
-        "Detecting user preferred color scheme reliably from request hints or query parameters.",
-        "Injecting theme colors into existing templates without breaking current UI layout or styles."
+        "Direct CSS updates in Python code may be error-prone and harder to maintain.",
+        "Ensuring all UI elements, especially syntax highlighting and result panels, remain legible under both themes.",
+        "Cross-browser compatibility and local storage availability.",
+        "Potential UI flicker or delay when applying persisted theme on page load."
       ],
-      "recommended_approach": "Define theme color palettes as Python constants or config in the backend. Extend the theme resolver helper to determine the active theme based on session data, request hints, or query parameters. Modify presentation/web_ui.py and helper modules to inject the selected theme colors into templates dynamically. Implement a server-side toggle endpoint or UI control to switch themes, updating the session accordingly. Ensure CSS classes or inline styles adapt based on the injected palette to maintain legibility. Write unit tests for the theme resolver helper covering all scenarios. Perform manual UI testing to verify visual consistency and accessibility.",
+      "recommended_approach": "Modify web_ui.py to include CSS definitions for both dark and light themes and implement a toggle control in the UI. Use JavaScript embedded or injected via Python to handle theme switching and store the preference in local storage. On page load, read the stored preference and apply the corresponding theme CSS. Add unit tests to verify theme toggling logic and CSS application.",
       "estimated_files": [
-        "presentation/web_ui.py",
-        "presentation/helpers/theme_resolver.py",
-        "presentation/templates/base.html",
-        "presentation/static/css/theme.css",
-        "tests/unit/test_theme_resolver.py"
+        "presentation/web_ui.py"
       ]
     },
     "implementation": {
@@ -65,82 +59,46 @@
       "implementation_steps": [
         {
           "step": 1,
-          "description": "Define light and dark theme color palettes as Python constants for reuse across the backend and templates.",
-          "agent": "CodeAgent",
-          "files_to_create": [
-            {
-              "path": "presentation/theme_palettes.py",
-              "instructions": [
-                "Create LIGHT_THEME and DARK_THEME dictionaries with color values for backgrounds, text, syntax highlighting, and panels ensuring WCAG accessibility.",
-                "Export these palettes for use in theme resolver and template injection."
-              ]
-            }
-          ],
-          "files_to_update": [],
-          "validation": "Verify that the theme_palettes.py file contains two dictionaries with appropriate color keys and values."
-        },
-        {
-          "step": 2,
-          "description": "Implement a theme resolver helper to determine the active theme based on session data, request hints (e.g., 'prefers-color-scheme' header), and query parameters, defaulting to light theme.",
-          "agent": "CodeAgent",
-          "files_to_create": [
-            {
-              "path": "presentation/helpers/theme_resolver.py",
-              "instructions": [
-                "Implement functions to resolve theme preference in order: query parameter override, session stored theme, request header 'Sec-CH-Prefers-Color-Scheme' or 'Prefers-Color-Scheme', then default to light.",
-                "Provide a function to update the session theme based on user toggle.",
-                "Expose a function to get the active theme palette dictionary from theme_palettes.py."
-              ]
-            }
-          ],
-          "files_to_update": [],
-          "validation": "Unit tests will verify theme resolution logic for all scenarios."
-        },
-        {
-          "step": 3,
-          "description": "Modify presentation/web_ui.py to integrate the theme resolver helper, inject the active theme palette into template rendering context, and add a server-side toggle endpoint to switch themes updating the session.",
+          "description": "Add CSS styles for both dark and light themes directly in presentation/web_ui.py, including styles for query syntax highlighting and result panels to ensure legibility.",
           "agent": "CodeAgent",
           "files_to_create": [],
           "files_to_update": [
             {
               "path": "presentation/web_ui.py",
               "instructions": [
-                "Import theme_resolver and theme_palettes modules.",
-                "On each request rendering UI, call theme_resolver to get active theme and inject palette colors into template context.",
-                "Add a new route or handler to toggle theme on user action, updating session and redirecting back to UI.",
-                "Ensure session management supports storing theme preference."
+                "Define CSS styles for light and dark themes as string constants or variables.",
+                "Include CSS rules for syntax highlighting and result panels for both themes.",
+                "Add a CSS class or data attribute to the root HTML element to switch themes."
               ]
             }
           ],
-          "validation": "Manually verify theme toggling persists across requests and updates UI colors."
+          "validation": "Verify that CSS styles for both themes are present in the web_ui.py and cover all relevant UI elements."
         },
         {
-          "step": 6,
-          "description": "Write comprehensive unit tests for the theme resolver helper covering default theme fallback, detection from request headers, query parameter overrides, and session persistence.",
-          "agent": "TestAgent",
-          "files_to_create": [
+          "step": 2,
+          "description": "Implement a theme toggle control in the UI rendered by web_ui.py and embed JavaScript to handle theme switching and persist the user's choice in local storage.",
+          "agent": "CodeAgent",
+          "files_to_create": [],
+          "files_to_update": [
             {
-              "path": "tests/unit/test_theme_resolver.py",
+              "path": "presentation/web_ui.py",
               "instructions": [
-                "Test default theme is light when no hints or session data present.",
-                "Test theme resolution from query parameters overrides session and headers.",
-                "Test theme resolution from session data persists across calls.",
-                "Test theme resolution from request headers when no session or query param.",
-                "Test session update function correctly sets theme."
+                "Add a toggle button or switch in the HTML output to allow users to switch between dark and light themes.",
+                "Embed JavaScript that listens for toggle events, applies the selected theme by modifying the root element's class or attribute, and saves the preference to local storage.",
+                "On page load, read the stored theme preference from local storage and apply the corresponding theme automatically."
               ]
             }
           ],
-          "files_to_update": [],
-          "validation": "All unit tests pass and cover edge cases."
+          "validation": "Test in a browser that toggling the theme updates the UI immediately and that the selected theme persists after page reload."
         }
       ],
       "testing_strategy": {
         "unit_tests": [
-          "tests/unit/test_theme_resolver.py"
+          "tests/test_web_ui.py"
         ],
         "integration_tests": []
       },
-      "pr_description": "Implement backend-driven light/dark theme toggle in the Python-rendered web UI. Define accessible color palettes, resolve theme preference from session, request hints, and query parameters. Inject theme colors into templates and CSS for consistent UI appearance. Add server-side toggle endpoint persisting user choice in session. Include unit tests for theme resolution logic."
+      "pr_description": "Implemented toggleable dark/light theme support in the Python-rendered web UI (presentation/web_ui.py). Added CSS styles for both themes directly in web_ui.py, including syntax highlighting and result panel styles to ensure legibility. Introduced a UI toggle control with embedded JavaScript to switch themes and persist user preference in local storage. Added unit tests to verify theme toggle functionality and CSS application. This enhancement improves user experience by allowing seamless switching between dark and light modes with preference persistence across page reloads."
     }
   },
   "implementation": {
@@ -195,7 +153,7 @@
     {
       "agent": "Orchestrator",
       "action": "Execution plan created",
-      "result": "4 steps, Branch: feature/dark-light-theme-toggle",
+      "result": "2 steps, Branch: feature/dark-light-theme-toggle",
       "success": true,
       "state": "planning"
     },

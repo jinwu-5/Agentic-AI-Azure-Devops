@@ -19,6 +19,7 @@ class SystemConfig:
         self.organization_url = os.getenv("AZURE_DEVOPS_ORG_URL")
         self.pat_token = os.getenv("AZURE_DEVOPS_PAT")
         self.default_project = os.getenv("AZURE_DEVOPS_PROJECT")
+        self.repository_id = os.getenv("AZURE_DEVOPS_REPOSITORY_ID")
 
         # Paths - Now reads from .env with fallback to current directory
         self.repository_path = os.getenv("REPOSITORY_PATH", os.getcwd())

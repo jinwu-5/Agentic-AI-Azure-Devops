@@ -62,7 +62,7 @@ async def main():
         rag
     )
     orchestrator.refresh_project_context()
-    devops_agent = DevOpsAgent(ai_client, config.deployment_name, mcp_manager, config.repository_path)
+    devops_agent = DevOpsAgent(ai_client, config.deployment_name, mcp_manager, config.repository_path, config.repository_id)
     code_agent = CodeAgent(ai_client, config.deployment_name, mcp_manager, rag, config.repository_path)
     test_agent = TestAgent(ai_client, config.deployment_name, mcp_manager, rag, config.repository_path)
     
@@ -133,13 +133,17 @@ async def main():
     commit_message = f"feat: {context.work_item_title}\n\nImplements work item #{context.work_item_id}"
     if await devops_agent.commit_changes(context, commit_message):
         print("✓ Changes committed")
-        
-        response = input("\nPush to remote? (y/n): ")
-        if response.lower() == 'y':
+
+        response = input("\nPush to remote? (y/n): ").strip().lower()
+        if response == 'y':
             if await devops_agent.push_to_remote(context):
                 print("✓ Pushed to remote")
             else:
-                print("✗ Push failed")
+                print("✗ Push failed - check errors above")
+        elif response == 'n':
+            print("⊘ Skipped push to remote")
+        else:
+            print("⊘ Invalid input - skipping push")
     else:
         print("✗ Commit failed")
     
@@ -150,13 +154,17 @@ async def main():
     print("PHASE 6: PULL REQUEST")
     print("="*60)
     
-    response = input("\nCreate Pull Request? (y/n): ")
-    if response.lower() == 'y':
+    response = input("\nCreate Pull Request? (y/n): ").strip().lower()
+    if response == 'y':
         if await devops_agent.create_pull_request(context):
             print("✓ Pull Request created")
             print(f"  PR URL: {context.pr_url}")
         else:
-            print("✗ PR creation failed")
+            print("✗ PR creation failed - check errors above")
+    elif response == 'n':
+        print("⊘ Skipped PR creation")
+    else:
+        print("⊘ Invalid input - skipping PR creation")
     
     state_mgr.save_context(context, "phase6_complete")
     

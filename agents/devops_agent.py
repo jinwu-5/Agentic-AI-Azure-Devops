@@ -1,12 +1,16 @@
-from core import BaseAgent, WorkflowContext, AgentState
-from typing import Dict, Any, List
+import json
+from typing import Any, Dict, List
+
 import git
+from git.remote import PushInfo
+
+from core import AgentState, BaseAgent, WorkflowContext
 
 
 class DevOpsAgent(BaseAgent):
     """
     DevOps Agent - Manages Git and Azure DevOps operations
-    
+
     Responsibilities:
     1. Create and manage Git branches
     2. Commit code changes
@@ -14,12 +18,13 @@ class DevOpsAgent(BaseAgent):
     4. Create pull requests
     5. Link commits to work items
     """
-    
-    def __init__(self, ai_client, deployment_name, mcp_manager, repo_path: str):
+
+    def __init__(self, ai_client, deployment_name, mcp_manager, repo_path: str, repository_id: str = None):
         super().__init__("DevOps", ai_client, deployment_name)
         self.mcp_manager = mcp_manager
         self.repo_path = repo_path
         self.repo = None
+        self.repository_id = repository_id
     
     async def execute(self, context: WorkflowContext) -> bool:
         """Main execution - not used directly, agents call specific methods"""
@@ -147,37 +152,55 @@ class DevOpsAgent(BaseAgent):
             # Fallback message
             return f"feat: implement {context.work_item_title}"
     
-    async def push_to_remote(self, context: WorkflowContext, 
+    async def push_to_remote(self, context: WorkflowContext,
                             remote_name: str = "origin") -> bool:
         """Push the feature branch to remote repository"""
         self.log(context, "Pushing to remote", f"{remote_name}/{context.branch_name}")
-        
+
         try:
             if not self.repo:
                 if not self.initialize_repo():
                     return False
-            
+
             # Get remote
             remote = self.repo.remote(remote_name)
-            
+            print(f"[{self.name}] Remote URL: {remote.url}")
+
             # Push branch
-            push_info = remote.push(context.branch_name)
-            
-            if push_info:
-                self.log(context, "Pushed to remote", 
-                        f"{remote_name}/{context.branch_name}", True)
-                return True
+            print(f"[{self.name}] Executing push...")
+            push_info_list = remote.push(context.branch_name)
+            print(f"[{self.name}] Push returned {len(push_info_list)} info objects")
+
+            # Check if push was successful
+            if push_info_list:
+                # Get first push info
+                info = push_info_list[0]
+                print(f"[{self.name}] Push flags: {info.flags}")
+                print(f"[{self.name}] Push summary: {info.summary}")
+
+                # Check for errors in push
+                if info.flags & PushInfo.ERROR:
+                    self.log(context, "Push failed", f"Error: {info.summary}", False)
+                    return False
+                elif info.flags & (PushInfo.NEW_HEAD | PushInfo.FAST_FORWARD | PushInfo.FORCED_UPDATE | PushInfo.UP_TO_DATE):
+                    # Success cases
+                    self.log(context, "Pushed to remote",
+                            f"{remote_name}/{context.branch_name}", True)
+                    return True
+                else:
+                    self.log(context, "Push uncertain", f"Flags: {info.flags}, Summary: {info.summary}", False)
+                    return False
             else:
                 self.log(context, "Push failed", "No push info returned", False)
                 return False
-            
+
         except git.GitCommandError as e:
             # Branch might not have remote tracking yet
             if "has no upstream branch" in str(e):
                 try:
                     # Set upstream and push
                     self.repo.git.push('--set-upstream', remote_name, context.branch_name)
-                    self.log(context, "Pushed with upstream", 
+                    self.log(context, "Pushed with upstream",
                             f"{remote_name}/{context.branch_name}", True)
                     return True
                 except Exception as e2:
@@ -195,41 +218,152 @@ class DevOpsAgent(BaseAgent):
         """Create a pull request in Azure DevOps"""
         self.log(context, "Creating pull request", "Preparing PR")
         context.current_state = AgentState.CREATING_PR
-        
+
         try:
-            # Get PR description from execution plan
+            # Build comprehensive PR description
             plan = context.execution_plan.get("implementation", {})
-            pr_description = plan.get("pr_description", context.work_item_description)
-            
+
+            # Start with work item description
+            pr_description = f"## Summary\n{context.work_item_description}\n\n"
+
+            # Add implementation details
+            steps = plan.get("implementation_steps", [])
+            if steps:
+                pr_description += "## Implementation\n"
+                for i, step in enumerate(steps, 1):
+                    pr_description += f"{i}. {step.get('description', 'N/A')}\n"
+                pr_description += "\n"
+
+            # Add files changed
+            if context.implementation_files:
+                pr_description += "## Files Changed\n"
+                for file_path in context.implementation_files.keys():
+                    pr_description += f"- `{file_path}`\n"
+                pr_description += "\n"
+
+            # Add test information
+            test_steps = [s for s in steps if s.get("agent") == "TestAgent"]
+            if test_steps or context.test_files:
+                pr_description += "## Testing\n"
+
+                # Add test files
+                if context.test_files:
+                    pr_description += "**Test Files:**\n"
+                    for test_file in context.test_files:
+                        pr_description += f"- `{test_file}`\n"
+                    pr_description += "\n"
+
+                # Add test steps from execution plan
+                if test_steps:
+                    pr_description += "**Test Coverage:**\n"
+                    for step in test_steps:
+                        pr_description += f"- {step.get('description', 'N/A')}\n"
+                    pr_description += "\n"
+
+            # Add manual testing steps (always include)
+            pr_description += "## Manual Testing Steps\n"
+
+            # Check if there's a predefined test plan
+            test_plan = plan.get("test_plan", "")
+            if test_plan:
+                pr_description += f"{test_plan}\n"
+            else:
+                # Generate basic manual testing steps based on implementation
+                pr_description += "1. Pull the branch and verify the code changes\n"
+                pr_description += "2. Review the implementation against acceptance criteria\n"
+
+                if context.implementation_files:
+                    pr_description += "3. Test the modified functionality:\n"
+                    for file_path in list(context.implementation_files.keys())[:3]:  # Show first 3 files
+                        pr_description += f"   - Verify changes in `{file_path}`\n"
+
+                if test_steps:
+                    pr_description += "4. Run automated tests and verify all pass\n"
+                    pr_description += "5. Perform integration testing with related components\n"
+                else:
+                    pr_description += "4. Perform integration testing with related components\n"
+
+                pr_description += f"6. Verify the changes address Work Item #{context.work_item_id}\n"
+
             # Generate PR title
             pr_title = f"{context.work_item_title} (Work Item #{context.work_item_id})"
-            
+
+            print(f"[{self.name}] PR Title: {pr_title}")
+            print(f"[{self.name}] Source: refs/heads/{context.branch_name}")
+            print(f"[{self.name}] Target: refs/heads/main")
+            print(f"[{self.name}] Work Item: {context.work_item_id}")
+
+            # Build parameters for PR creation
+            pr_params = {
+                "title": pr_title,
+                "description": pr_description,
+                "sourceRefName": f"refs/heads/{context.branch_name}",
+                "targetRefName": "refs/heads/main",  # or master
+                "workItemRefs": [int(context.work_item_id)]
+            }
+
+            # Add repository ID if available
+            if self.repository_id:
+                pr_params["repositoryId"] = self.repository_id
+
             # Call Azure DevOps MCP to create PR
             result = await self.mcp_manager.call_tool(
                 "azure_devops",
                 "create_pull_request",
-                {
-                    "title": pr_title,
-                    "description": pr_description,
-                    "sourceRefName": f"refs/heads/{context.branch_name}",
-                    "targetRefName": "refs/heads/main",  # or master
-                    "workItemRefs": [
-                        {
-                            "id": str(context.work_item_id)
-                        }
-                    ]
-                }
+                pr_params
             )
-            
+
+            print(f"[{self.name}] MCP Result: {result}")
+
             if "result" in result:
-                # Parse PR response
-                pr_data = result["result"]
-                context.pr_id = str(pr_data.get("pullRequestId", ""))
-                context.pr_url = pr_data.get("url", "")
-                
-                self.log(context, "Pull request created", 
+                # Parse PR response - MCP returns data in content array
+                mcp_result = result["result"]
+
+                # Check if result has content array (MCP format)
+                if "content" in mcp_result and isinstance(mcp_result["content"], list):
+                    if len(mcp_result["content"]) > 0:
+                        content_item = mcp_result["content"][0]
+                        if content_item.get("type") == "text":
+                            text_content = content_item["text"]
+
+                            # Check if it's an error message
+                            if text_content.startswith("Error:"):
+                                error_msg = text_content.replace("Error: ", "")
+                                self.log(context, "PR creation failed", error_msg, False)
+                                context.add_error(f"PR creation failed: {error_msg}")
+                                return False
+
+                            # Parse JSON from text content
+                            import json
+                            try:
+                                pr_data = json.loads(text_content)
+                            except json.JSONDecodeError as e:
+                                self.log(context, "Failed to parse PR response", str(e), False)
+                                context.add_error(f"Failed to parse PR response: {e}")
+                                return False
+                        else:
+                            pr_data = mcp_result
+                    else:
+                        pr_data = mcp_result
+                else:
+                    # Direct result format
+                    pr_data = mcp_result
+
+                pr_id = pr_data.get("pullRequestId")
+                pr_url = pr_data.get("url", "")
+
+                # Validate that PR was actually created
+                if not pr_id:
+                    self.log(context, "PR creation failed", "No PR ID returned", False)
+                    context.add_error("PR creation failed: No PR ID in response")
+                    return False
+
+                context.pr_id = str(pr_id)
+                context.pr_url = pr_url
+
+                self.log(context, "Pull request created",
                         f"PR #{context.pr_id}", True)
-                
+
                 print(f"\n{'='*60}")
                 print("PULL REQUEST CREATED")
                 print('='*60)
@@ -238,7 +372,7 @@ class DevOpsAgent(BaseAgent):
                 print(f"Branch: {context.branch_name} → main")
                 print(f"URL: {context.pr_url}")
                 print('='*60 + '\n')
-                
+
                 return True
             else:
                 error = result.get("error", "Unknown error")
