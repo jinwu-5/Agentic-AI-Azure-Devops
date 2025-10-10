@@ -134,37 +134,33 @@ async def main():
     if await devops_agent.commit_changes(context, commit_message):
         print("✓ Changes committed")
 
-        response = input("\nPush to remote? (y/n): ").strip().lower()
-        if response == 'y':
-            if await devops_agent.push_to_remote(context):
-                print("✓ Pushed to remote")
-            else:
-                print("✗ Push failed - check errors above")
-        elif response == 'n':
-            print("⊘ Skipped push to remote")
+        # Automatically push to remote
+        if await devops_agent.push_to_remote(context):
+            print("✓ Pushed to remote")
         else:
-            print("⊘ Invalid input - skipping push")
+            print("✗ Push failed - check errors above")
+            await mcp_manager.cleanup()
+            return
     else:
         print("✗ Commit failed")
-    
+        await mcp_manager.cleanup()
+        return
+
     state_mgr.save_context(context, "phase5_commit")
-    
+
     # PHASE 6: Create PR
     print("\n" + "="*60)
     print("PHASE 6: PULL REQUEST")
     print("="*60)
-    
-    response = input("\nCreate Pull Request? (y/n): ").strip().lower()
-    if response == 'y':
-        if await devops_agent.create_pull_request(context):
-            print("✓ Pull Request created")
-            print(f"  PR URL: {context.pr_url}")
-        else:
-            print("✗ PR creation failed - check errors above")
-    elif response == 'n':
-        print("⊘ Skipped PR creation")
+
+    # Automatically create pull request
+    if await devops_agent.create_pull_request(context):
+        print("✓ Pull Request created")
+        print(f"  PR URL: {context.pr_url}")
     else:
-        print("⊘ Invalid input - skipping PR creation")
+        print("✗ PR creation failed - check errors above")
+        await mcp_manager.cleanup()
+        return
     
     state_mgr.save_context(context, "phase6_complete")
     

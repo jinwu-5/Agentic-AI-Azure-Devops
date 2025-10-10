@@ -73,7 +73,8 @@ Create a `.env` file:
     AZURE_AI_ENDPOINT=your_endpoint
     AZURE_AI_KEY=your_key
     AZURE_AI_DEPLOYMENT=your_deployment_name
-    AZURE_API_VERSION=2024-02-15-preview
+    AZURE_API_VERSION=your_deployment_version
+    AZURE_AI_EMBEDDING_DEPLOYMENT=your_embedding_deployment_name
 
     # Azure DevOps
     AZURE_DEVOPS_ORG_URL=https://dev.azure.com/your_org
@@ -82,7 +83,7 @@ Create a `.env` file:
 
     # Repository (optional, defaults to current directory)
     REPOSITORY_PATH=/path/to/your/project
-
+    AZURE_DEVOPS_REPOSITORY_ID=your_repo_id
 ## Usage
 
 ### Full Workflow
@@ -144,8 +145,7 @@ This will:
 - **MCP connection failures** → Ensure Node.js is installed, MCP servers install automatically via `npx`  
 
 ## Future Enhancements
+- Implement test driven development as an option
 - Add LangGraph for complex workflow orchestration to try to improve code generation quality
-- Complete flow end to end (PR creation) and remove all human-in-the-loop approval gates unless unresolvable error occurs
 - Pull the code repo directly from Azure DevOps 
-- Implement test driven development as an option 
 - Move agent interactions creation into docker

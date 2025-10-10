@@ -48,10 +48,18 @@ class OrchestratorAgent(BaseAgent):
                 if '/' in path
             })[:8]
 
+            # Include existing file extensions
             allowed_extensions = {
                 (ext.lower() if isinstance(ext, str) else ext)
                 for ext, count in file_types.items() if count > 0 and isinstance(ext, str)
             }
+
+            # Always allow common web/config file types even if not present yet
+            # This allows agents to create new types of files as needed
+            common_extensions = {'.py', '.js', '.ts', '.jsx', '.tsx', '.css', '.scss',
+                               '.html', '.htm', '.json', '.yaml', '.yml', '.md',
+                               '.txt', '.sql', '.sh', '.env'}
+            allowed_extensions = allowed_extensions.union(common_extensions)
 
             return {
                 "primary_language": analysis.get("primary_language", "unknown"),
@@ -264,26 +272,33 @@ class OrchestratorAgent(BaseAgent):
         system_prompt = """You are a technical project manager creating execution plans.
 
             Create actionable plans for specialized AI agents (DevOps, Code, Test).
-            
+
             IMPORTANT - File Organization:
-            - CSS files go in: src/styles/
-            - JavaScript/React files go in: src/components/ or src/utils/
-            - Test files go in: tests/
-            - Always use proper directory structure
-            
+            - Analyze the ACTUAL project structure provided below
+            - Use EXISTING directories and file patterns
+            - Do NOT invent new directories or file structures
+            - If a file is mentioned but doesn't exist, find the EQUIVALENT file in the actual structure
+
             Planning Output Requirements:
             - Use "files_to_create" for brand new files and include an "instructions" array describing their purpose
             - Use "files_to_update" for existing files, provide "path" plus bullet "instructions" outlining the exact edits
-            - Every CodeAgent step must reference at least one file in "files_to_create" or "files_to_update"""
+            - Every CodeAgent step must reference at least one file in "files_to_create" or "files_to_update"
 
-        allowed_exts: Set[str] = self._project_context.get("allowed_extensions", set())
-        if allowed_exts:
-            system_prompt += (
-                "\n\nProject constraints:\n"
-                f"- Repository primary language: {self._project_context.get('primary_language')}\n"
-                f"- Only propose changes using existing extensions: {', '.join(sorted(allowed_exts))}\n"
-                "- Do not introduce file types or frameworks that are not already present"
-            )
+            CRITICAL - Implementation Completeness:
+            - Each step must produce WORKING, INTEGRATED code - not isolated pieces
+            - For UI features: Create CSS, add HTML elements, wire JavaScript, AND integrate into Python rendering
+            - Instructions must be SPECIFIC and DETAILED - explain exactly what code to add/modify
+            - Think end-to-end: How will the user actually USE this feature?
+            - Don't create files that are never loaded/imported/used"""
+
+        # Note: We now allow common web file types even if not present
+        # So we don't need to restrict the AI as strictly
+        system_prompt += (
+            "\n\nProject context:\n"
+            f"- Repository primary language: {self._project_context.get('primary_language')}\n"
+            f"- You can create files with common extensions (.py, .js, .css, .html, .json, etc.)\n"
+            "- Follow the existing project structure and naming conventions"
+        )
 
         sample_files = '\n'.join(
             f"- {path}" for path in self._project_context.get('sample_python_files', [])
@@ -291,6 +306,15 @@ class OrchestratorAgent(BaseAgent):
         python_dirs = '\n'.join(
             f"- {d}" for d in self._project_context.get('python_directories', [])
         ) or "- (no python directories detected)"
+
+        # Get actual files from RAG to help with planning
+        actual_files = ""
+        if self.rag:
+            try:
+                all_files = sorted({chunk['file_path'] for chunk in self.rag.chunks})
+                actual_files = '\n'.join(f"- {path}" for path in all_files[:50])
+            except:
+                actual_files = "(unable to list files)"
 
         user_prompt = f"""Create plan for:
 
@@ -311,40 +335,54 @@ class OrchestratorAgent(BaseAgent):
             
             Representative Python files:
             {sample_files}
-            
-            Provide plan in JSON with PROPER FILE PATHS:
+
+            CRITICAL - ACTUAL FILES IN REPOSITORY (Use these, don't invent new ones!):
+            {actual_files}
+
+            Provide plan in JSON with PROPER FILE PATHS (must exist or be creatable):
             {{
                 "branch_name": "feature/story-{context.work_item_id}",
                 "implementation_steps": [
                     {{
                         "step": 1,
-                        "description": "What to do",
+                        "description": "Add theme CSS styles and update styles.py to include them",
                         "agent": "CodeAgent",
-                        "files_to_create": [
-                            {{
-                                "path": "presentation/theme_palettes.py",
-                                "instructions": [
-                                    "Define LIGHT_THEME and DARK_THEME dictionaries with WCAG-compliant colours"
-                                ]
-                            }}
-                        ],
                         "files_to_update": [
                             {{
-                                "path": "presentation/web_ui.py",
+                                "path": "presentation/styles.py",
                                 "instructions": [
-                                    "Inject theme resolver helper into render flow",
-                                    "Add session-backed toggle endpoint"
+                                    "Add CSS variables for light theme: --bg-color: #f8f9fa, --text-color: #333, --primary-color: #0066cc, etc.",
+                                    "Add CSS variables for dark theme: --bg-color: #1a1a1a, --text-color: #e0e0e0, --primary-color: #4da6ff, etc.",
+                                    "Wrap existing styles to use CSS variables: body {{ background: var(--bg-color); color: var(--text-color); }}",
+                                    "Add .dark-theme class that overrides CSS variables with dark values",
+                                    "Ensure syntax highlighting colors are legible in both themes"
                                 ]
                             }}
                         ],
-                        "validation": "How to verify"
+                        "validation": "CSS contains both light and dark theme variables and existing styles use them"
+                    }},
+                    {{
+                        "step": 2,
+                        "description": "Add theme toggle UI button and wire JavaScript to HTML template",
+                        "agent": "CodeAgent",
+                        "files_to_update": [
+                            {{
+                                "path": "presentation/html_template.py",
+                                "instructions": [
+                                    "Add theme toggle button in header: <button id='theme-toggle' class='theme-toggle-btn'>🌙 Dark Mode</button>",
+                                    "Add inline JavaScript BEFORE closing body tag to: (1) read theme from localStorage, (2) apply 'dark-theme' class to body if dark, (3) toggle theme on button click, (4) update localStorage, (5) update button text",
+                                    "Add CSS for .theme-toggle-btn styling in the styles section"
+                                ]
+                            }}
+                        ],
+                        "validation": "HTML template includes toggle button and JavaScript that persists theme to localStorage"
                     }}
                 ],
                 "testing_strategy": {{
-                    "unit_tests": ["tests/test_theme_resolver.py"],
-                    "integration_tests": ["tests/test_web_ui.py"]
+                    "unit_tests": ["tests/test_theme_functionality.py"],
+                    "integration_tests": []
                 }},
-                "pr_description": "PR description"
+                "pr_description": "Implemented theme toggle feature with CSS variables, UI button, and localStorage persistence"
             }}"""
 
         try:
@@ -413,13 +451,25 @@ class OrchestratorAgent(BaseAgent):
                 if not self._is_extension_allowed(entry["path"], allowed_exts):
                     invalid_reasons.append(f"Unsupported extension: {entry['path']}")
 
+            # Auto-correct: Move non-existent files from updates to creates
+            corrected_update_entries = []
             for entry in update_entries:
                 path = entry["path"]
                 if not self._is_extension_allowed(path, allowed_exts):
                     invalid_reasons.append(f"Unsupported extension: {path}")
                     continue
+
+                # Check if file exists
                 if repo_path and not os.path.exists(os.path.join(repo_path, path)):
-                    invalid_reasons.append(f"File not found for update: {path}")
+                    # Auto-correct: Move to files_to_create
+                    print(f"[Orchestrator] Auto-correcting: Moving '{path}' from files_to_update → files_to_create (file doesn't exist)")
+                    create_entries.append(entry)
+                else:
+                    corrected_update_entries.append(entry)
+
+            # Update the step with corrected lists
+            step["files_to_create"] = create_entries
+            step["files_to_update"] = corrected_update_entries
 
             if invalid_reasons:
                 removed_steps.append({

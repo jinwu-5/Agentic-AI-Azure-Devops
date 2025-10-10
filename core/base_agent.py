@@ -1,6 +1,7 @@
 from typing import Optional, Dict, Any
 from openai import AzureOpenAI
 import json
+import asyncio
 
 class BaseAgent:
     """Base class for all agents"""
@@ -19,20 +20,36 @@ class BaseAgent:
         context.add_log(self.name, action, result, success)
         print(f"[{self.name}] {action}: {result}")
     
-    async def call_ai(self, system_prompt: str, user_prompt: str, 
-                      temperature: float = 0.1, max_tokens: int = 2000) -> str:
-        """Call Azure OpenAI"""
+    async def call_ai(self, system_prompt: str, user_prompt: str,
+                      temperature: float = 0.1, max_tokens: int = 8000,
+                      timeout: int = 180) -> str:
+        """Call Azure OpenAI with timeout protection"""
         try:
-            response = self.ai_client.chat.completions.create(
-                model=self.deployment_name,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=temperature,
-                max_tokens=max_tokens
-            )
+            # Run the synchronous OpenAI call in a thread pool with timeout
+            async def _make_request():
+                loop = asyncio.get_event_loop()
+                return await loop.run_in_executor(
+                    None,
+                    lambda: self.ai_client.chat.completions.create(
+                        model=self.deployment_name,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        timeout=timeout
+                    )
+                )
+
+            # Apply asyncio timeout wrapper
+            response = await asyncio.wait_for(_make_request(), timeout=timeout)
             return response.choices[0].message.content
+
+        except asyncio.TimeoutError:
+            print(f"[{self.name}] ⚠️  AI call timed out after {timeout}s")
+            print(f"[{self.name}] Consider breaking this into smaller operations")
+            return ""
         except Exception as e:
             print(f"[{self.name}] AI call failed: {e}")
             return ""

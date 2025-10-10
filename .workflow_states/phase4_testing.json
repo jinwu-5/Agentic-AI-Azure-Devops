@@ -1,15 +1,15 @@
 {
-  "saved_at": "2025-10-09T22:55:09.349164",
+  "saved_at": "2025-10-10T10:27:34.597595",
   "work_item": {
     "id": "9",
     "title": "Dark/Light Theme Implementation",
-    "description": "\ud83d\udea9 AC Addressed (Required) Introduce light/dark theme selection entirely within the existing Python-rendered web UI (presentation/web_ui.py and helpers). You should make update to css in web_ui.py directly. Ensure query syntax highlighting and result panels remain legible under both themes. Persist the user\u2019s theme choice across requests using local storage. \ud83d\udca1 What do you want to accomplish? (Required) Improve user experience by allow users to toggle between dark/light themes. \ud83d\udccb Testability Considerations (Required) Unit tests for the web_ui.py to check the new dark/light theme functionality.",
+    "description": "\ud83d\udea9 AC Addressed (Required) Introduce light/dark theme selection entirely within the existing Python-rendered web UI. Ensure query syntax highlighting and result panels remain legible under both themes. Persist the user\u2019s theme choice across requests using local storage. \ud83d\udca1 What do you want to accomplish? (Required) Improve user experience by allow users to toggle between dark/light themes. \ud83d\udccb Testability Considerations (Required) Unit tests to check the new dark/light theme functionality.",
     "acceptance_criteria": [
-      "Users can toggle between dark and light themes via the web UI.",
-      "The CSS updates in web_ui.py correctly apply styles for both themes.",
-      "Query syntax highlighting and result panels remain readable in both themes.",
-      "User\u2019s theme preference is saved in local storage and persists across page reloads.",
-      "Unit tests cover the theme toggle functionality and CSS application."
+      "Users can toggle between dark and light themes via the UI.",
+      "Query syntax highlighting colors adjust correctly and remain legible in both themes.",
+      "Result panels display content clearly and legibly in both themes.",
+      "User's theme preference is saved in local storage and applied automatically on subsequent page loads.",
+      "Unit tests cover theme toggle functionality and persistence."
     ]
   },
   "git": {
@@ -27,31 +27,34 @@
       "story_points": null
     },
     "analysis": {
-      "summary": "Implement a toggleable dark/light theme within the existing Python-rendered web UI by updating CSS directly in web_ui.py, ensuring syntax highlighting and result panels remain legible, and persisting user preference using local storage.",
+      "summary": "Implement a toggle for dark and light themes in the existing Python-rendered web UI, ensuring syntax highlighting and result panels remain legible, with user preference persisted via local storage.",
       "technical_requirements": [
-        "Add light/dark theme selection functionality within presentation/web_ui.py and helpers.",
-        "Update CSS styles directly in web_ui.py to support both themes.",
-        "Ensure query syntax highlighting and result panels are legible in both themes.",
-        "Persist user\u2019s theme choice across requests using browser local storage.",
-        "Add unit tests in web_ui.py to verify dark/light theme functionality."
+        "Add light/dark theme toggle functionality within the existing Python-rendered web UI.",
+        "Ensure query syntax highlighting adapts and remains legible under both themes.",
+        "Ensure result panels are styled appropriately for both themes to maintain readability.",
+        "Persist the user's theme choice across requests using local storage.",
+        "Implement unit tests to verify dark/light theme functionality."
       ],
       "acceptance_criteria": [
-        "Users can toggle between dark and light themes via the web UI.",
-        "The CSS updates in web_ui.py correctly apply styles for both themes.",
-        "Query syntax highlighting and result panels remain readable in both themes.",
-        "User\u2019s theme preference is saved in local storage and persists across page reloads.",
-        "Unit tests cover the theme toggle functionality and CSS application."
+        "Users can toggle between dark and light themes via the UI.",
+        "Query syntax highlighting colors adjust correctly and remain legible in both themes.",
+        "Result panels display content clearly and legibly in both themes.",
+        "User's theme preference is saved in local storage and applied automatically on subsequent page loads.",
+        "Unit tests cover theme toggle functionality and persistence."
       ],
       "complexity": "medium",
       "risks": [
-        "Direct CSS updates in Python code may be error-prone and harder to maintain.",
-        "Ensuring all UI elements, especially syntax highlighting and result panels, remain legible under both themes.",
-        "Cross-browser compatibility and local storage availability.",
-        "Potential UI flicker or delay when applying persisted theme on page load."
+        "Ensuring consistent and legible styling across all UI components under both themes.",
+        "Potential CSS conflicts or overrides in the existing styles.",
+        "Persisting theme preference reliably across different browsers and sessions.",
+        "Testing UI changes thoroughly without an existing theming framework."
       ],
-      "recommended_approach": "Modify web_ui.py to include CSS definitions for both dark and light themes and implement a toggle control in the UI. Use JavaScript embedded or injected via Python to handle theme switching and store the preference in local storage. On page load, read the stored preference and apply the corresponding theme CSS. Add unit tests to verify theme toggling logic and CSS application.",
+      "recommended_approach": "Introduce CSS variables or classes to define theme colors and styles. Modify the Python-rendered templates to include theme toggle controls and apply theme classes dynamically. Use JavaScript to handle toggle events and save the preference to local storage. On page load, read the stored preference and apply the corresponding theme. Write unit tests for the theme toggle logic and persistence.",
       "estimated_files": [
-        "presentation/web_ui.py"
+        "presentation/templates/base.html",
+        "presentation/static/css/theme.css",
+        "presentation/static/js/themeToggle.js",
+        "tests/test_theme_toggle.py"
       ]
     },
     "implementation": {
@@ -59,58 +62,96 @@
       "implementation_steps": [
         {
           "step": 1,
-          "description": "Add CSS styles for both dark and light themes directly in presentation/web_ui.py, including styles for query syntax highlighting and result panels to ensure legibility.",
+          "description": "Add theme CSS variables and update presentation/styles.py to support light and dark themes",
           "agent": "CodeAgent",
-          "files_to_create": [],
           "files_to_update": [
             {
-              "path": "presentation/web_ui.py",
+              "path": "presentation/styles.py",
               "instructions": [
-                "Define CSS styles for light and dark themes as string constants or variables.",
-                "Include CSS rules for syntax highlighting and result panels for both themes.",
-                "Add a CSS class or data attribute to the root HTML element to switch themes."
+                "Define CSS variables for the light theme at the root level, e.g., --bg-color: #f8f9fa, --text-color: #333333, --primary-color: #0066cc, --syntax-keyword: #00008b, --syntax-string: #a31515, --result-bg: #ffffff, --result-text: #000000.",
+                "Define a .dark-theme CSS class that overrides these variables with dark theme colors, e.g., --bg-color: #1a1a1a, --text-color: #e0e0e0, --primary-color: #4da6ff, --syntax-keyword: #569cd6, --syntax-string: #d69d85, --result-bg: #2a2a2a, --result-text: #ffffff.",
+                "Modify existing CSS selectors for body, query syntax highlighting, and result panels to use these CSS variables instead of hardcoded colors. For example, body { background-color: var(--bg-color); color: var(--text-color); }, syntax highlighting classes use var(--syntax-keyword), var(--syntax-string), etc.",
+                "Ensure all UI components that display query syntax and results use these variables so they adapt automatically when the .dark-theme class is applied to the body.",
+                "Add CSS rules for the theme toggle button styling, e.g., .theme-toggle-btn with appropriate padding, border, cursor, and colors that adapt to the theme variables."
               ]
             }
           ],
-          "validation": "Verify that CSS styles for both themes are present in the web_ui.py and cover all relevant UI elements."
+          "validation": "Verify that styles.py contains CSS variables for both themes, existing styles use these variables, and a .dark-theme class overrides them correctly.",
+          "files_to_create": []
         },
         {
           "step": 2,
-          "description": "Implement a theme toggle control in the UI rendered by web_ui.py and embed JavaScript to handle theme switching and persist the user's choice in local storage.",
+          "description": "Add theme toggle button to the base HTML template and integrate JavaScript for toggle and persistence",
           "agent": "CodeAgent",
-          "files_to_create": [],
           "files_to_update": [
             {
-              "path": "presentation/web_ui.py",
+              "path": "presentation/html_template.py",
               "instructions": [
-                "Add a toggle button or switch in the HTML output to allow users to switch between dark and light themes.",
-                "Embed JavaScript that listens for toggle events, applies the selected theme by modifying the root element's class or attribute, and saves the preference to local storage.",
-                "On page load, read the stored theme preference from local storage and apply the corresponding theme automatically."
+                "Locate the main base HTML template rendering function or string in html_template.py where the header or navigation bar is defined.",
+                "Insert a button element with id='theme-toggle' and class='theme-toggle-btn' in the header area, with initial text '\ud83c\udf19 Dark Mode'.",
+                "Add a <script> block just before the closing </body> tag that implements the following logic:",
+                " - On page load, read the 'theme' value from localStorage.",
+                " - If the stored theme is 'dark', add the 'dark-theme' class to the <body> element and update the button text to '\u2600\ufe0f Light Mode'.",
+                " - Add a click event listener to the toggle button that toggles the 'dark-theme' class on <body>.",
+                " - On toggle, update localStorage with the current theme ('dark' or 'light').",
+                " - Update the button text accordingly ('\ud83c\udf19 Dark Mode' when light, '\u2600\ufe0f Light Mode' when dark).",
+                "Ensure the script is pure JavaScript and does not rely on external libraries.",
+                "Confirm the theme toggle button styling is consistent with the CSS variables defined in styles.py."
               ]
             }
           ],
-          "validation": "Test in a browser that toggling the theme updates the UI immediately and that the selected theme persists after page reload."
+          "validation": "Confirm the base HTML template includes the toggle button and JavaScript that applies the theme class and persists the preference in localStorage.",
+          "files_to_create": []
+        },
+        {
+          "step": 3,
+          "description": "Add unit tests for theme toggle functionality and persistence",
+          "agent": "TestAgent",
+          "files_to_create": [
+            {
+              "path": "tests/test_theme_toggle.py",
+              "instructions": [
+                "Create unit tests to verify the theme toggle JavaScript logic using a headless browser or DOM simulation framework if available.",
+                "Test that the toggle button exists in the rendered HTML from presentation/html_template.py.",
+                "Test that clicking the toggle button adds/removes the 'dark-theme' class on the body element.",
+                "Test that localStorage is updated correctly when toggling themes.",
+                "Test that on page load, the theme is applied based on the stored localStorage value.",
+                "If no JavaScript testing framework is available, create Python tests that render the HTML and verify the toggle button presence and script inclusion.",
+                "Add tests to presentation/styles.py if possible to verify CSS variables exist (optional)."
+              ]
+            }
+          ],
+          "validation": "Unit tests cover theme toggle button presence, toggle behavior, localStorage persistence, and initial theme application.",
+          "files_to_update": []
         }
       ],
       "testing_strategy": {
         "unit_tests": [
-          "tests/test_web_ui.py"
+          "tests/test_theme_toggle.py"
         ],
         "integration_tests": []
       },
-      "pr_description": "Implemented toggleable dark/light theme support in the Python-rendered web UI (presentation/web_ui.py). Added CSS styles for both themes directly in web_ui.py, including syntax highlighting and result panel styles to ensure legibility. Introduced a UI toggle control with embedded JavaScript to switch themes and persist user preference in local storage. Added unit tests to verify theme toggle functionality and CSS application. This enhancement improves user experience by allowing seamless switching between dark and light modes with preference persistence across page reloads."
+      "pr_description": "Implemented dark/light theme toggle feature in the Python-rendered web UI. Added CSS variables for themes in styles.py, a toggle button and JavaScript in html_template.py to persist user preference in localStorage, and unit tests to verify toggle functionality and persistence."
     }
   },
   "implementation": {
     "files": {
-      "presentation/web_ui.py": "import os\nfrom dotenv import load_dotenv\n\nload_dotenv()\n\n\ndef get_demo_interface() -> str:\n    \"\"\"Generate the HTML for the interactive demo interface with database selection.\"\"\"\n\n    api_key = os.getenv(\"APP_API_KEY\", \"\")\n\n    if not api_key:\n        return \"\"\"\n        <!DOCTYPE html>\n        <html>\n        <body style=\"font-family: Arial, sans-serif; text-align: center; margin-top: 100px;\">\n            <h1 style=\"color: red;\">Configuration Error</h1>\n            <p>APP_API_KEY is not configured in environment variables.</p>\n            <p>Please set APP_API_KEY in your .env file and restart the server.</p>\n        </body>\n        </html>\n        \"\"\"\n\n    light_theme_css = \"\"\"\n        body { \n            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; \n            max-width: 1200px; margin: 0 auto; padding: 20px; background: #f8f9fa; color: #212529;\n        }\n        .header { text-align: center; margin-bottom: 30px; }\n        .database-selector {\n            background: white; padding: 20px; border-radius: 8px; margin: 20px 0;\n            box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n            color: #212529;\n        }\n        .database-grid {\n            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));\n            gap: 15px; margin-top: 15px;\n        }\n        .database-card {\n            border: 2px solid #e1e5e9; border-radius: 8px; padding: 15px;\n            cursor: pointer; transition: all 0.3s; background: #fafbfc;\n            margin-bottom: 8px; color: #212529;\n        }\n        .database-card:hover {\n            border-color: #0066cc; background: #f0f7ff;\n            transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1);\n        }\n        .database-card.selected {\n            border-color: #0066cc; background: #e7f3ff;\n            box-shadow: 0 0 0 3px rgba(0,102,204,0.2);\n        }\n        .database-name {\n            font-weight: 600; font-size: 18px; margin-bottom: 5px;\n            color: #0066cc;\n        }\n        .database-type {\n            display: inline-block; padding: 3px 8px; border-radius: 12px;\n            font-size: 12px; font-weight: 500; margin-bottom: 8px;\n        }\n        .database-type.postgresql {\n            background: #336791; color: white;\n        }\n        .database-type.mongodb {\n            background: #13aa52; color: white;\n        }\n        .database-info {\n            color: #666; font-size: 14px; line-height: 1.4;\n        }\n        .database-status {\n            margin-top: 8px; font-size: 12px;\n        }\n        .status-connected { color: #13aa52; }\n        .status-error { color: #dc3545; }\n        .examples { \n            background: white; padding: 20px; border-radius: 8px; margin: 20px 0; \n            box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n            color: #212529;\n        }\n        .input-section { \n            background: white; padding: 20px; border-radius: 8px; margin: 20px 0;\n            box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n            color: #212529;\n        }\n        .selected-db-indicator {\n            background: #e7f3ff; padding: 10px 15px; border-radius: 6px;\n            margin-bottom: 15px; display: none; align-items: center; gap: 10px;\n            color: #212529;\n        }\n        .selected-db-indicator.visible { display: flex; }\n        .chat { \n            background: white; border-radius: 8px; height: 500px; \n            padding: 20px; overflow-y: auto; margin: 20px 0;\n            box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n            color: #212529;\n        }\n        .input-row { display: flex; gap: 10px; align-items: center; }\n        #question { \n            flex: 1; padding: 12px; border: 2px solid #e1e5e9; border-radius: 6px;\n            font-size: 16px; outline: none; color: #212529; background: white;\n        }\n        #question:focus { border-color: #0066cc; }\n        #question:disabled { background: #f5f5f5; cursor: not-allowed; }\n        button { \n            padding: 12px 24px; background: #0066cc; color: white; border: none;\n            border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 600;\n            transition: background 0.2s;\n        }\n        button:hover:not(:disabled) { background: #0052a3; }\n        button:disabled { background: #ccc; cursor: not-allowed; }\n        .user-message { \n            background: #0066cc; color: white; padding: 12px 16px; \n            margin: 10px 0; border-radius: 18px 18px 4px 18px; max-width: 80%;\n            word-wrap: break-word;\n        }\n        .agent-message { \n            background: #f1f3f5; padding: 16px; margin: 10px 0; \n            border-radius: 18px 18px 18px 4px; max-width: 90%;\n            word-wrap: break-word; color: #212529;\n        }\n        .loading { \n            background: #fff3cd; padding: 12px; border-radius: 8px; \n            border-left: 4px solid #ffc107; margin: 10px 0;\n            color: #856404;\n        }\n        .error { \n            background: #f8d7da; padding: 16px; border-radius: 8px; \n            border-left: 4px solid #dc3545; margin: 10px 0; color: #721c24;\n        }\n        .error-details {\n            background: #f8f9fa; padding: 12px; border-radius: 4px;\n            margin-top: 10px; font-family: monospace; font-size: 12px;\n            border: 1px solid #e1e5e9; white-space: pre-wrap;\n            max-height: 300px; overflow-y: auto;\n            color: #212529;\n        }\n        .error-summary {\n            font-weight: bold; margin-bottom: 10px;\n        }\n        .error-expandable {\n            cursor: pointer; color: #0066cc; text-decoration: underline;\n            font-size: 12px; margin-top: 8px;\n        }\n        .error-expandable:hover { color: #0052a3; }\n        .query-error {\n            background: #fff3cd; padding: 15px; border-radius: 8px; \n            border-left: 4px solid #ffc107; margin: 15px 0; color: #856404;\n        }\n        table { \n            width: 100%; border-collapse: collapse; margin: 15px 0; \n            background: white; border-radius: 6px; overflow: hidden;\n            box-shadow: 0 1px 3px rgba(0,0,0,0.1);\n            color: #212529;\n        }\n        th, td { \n            padding: 10px 12px; text-align: left; border-bottom: 1px solid #e1e5e9; \n            word-wrap: break-word;\n        }\n        th { background: #f8f9fa; font-weight: 600; color: #495057; }\n        tr:hover { background: #f8f9fa; }\n        code { \n            background: #f1f3f5; padding: 2px 6px; border-radius: 4px; \n            font-family: 'Monaco', 'Consolas', monospace; font-size: 14px;\n            color: #c7254e;\n        }\n        pre { \n            background: #f8f9fa; padding: 16px; border-radius: 6px; \n            overflow-x: auto; border: 1px solid #e1e5e9; margin: 15px 0;\n            white-space: pre-wrap; line-height: 1.5;\n            color: #212529;\n        }\n        pre code {\n            background: transparent; padding: 0; border-radius: 0;\n            white-space: pre-wrap; word-wrap: break-word;\n        }\n        .example-btn {\n            background: #f8f9fa; border: 1px solid #e1e5e9; padding: 8px 12px;\n            border-radius: 20px; cursor: pointer; margin: 4px; display: inline-block;\n            font-size: 14px; color: #495057; transition: all 0.2s;\n        }\n        .example-btn:hover { background: #e9ecef; transform: translateY(-1px); }\n        h3 { color: #0066cc; margin: 20px 0 10px 0; }\n        h4 { color: #333; margin: 15px 0 8px 0; }\n        ul { margin: 10px 0; padding-left: 20px; }\n        li { margin: 5px 0; }\n        .no-database-warning {\n            background: #fff3cd; padding: 15px; border-radius: 8px;\n            border-left: 4px solid #ffc107; margin: 20px 0;\n            display: none;\n            color: #856404;\n        }\n        .no-database-warning.visible { display: block; }\n        .refresh-btn {\n            background: #28a745; padding: 8px 16px; font-size: 14px;\n            margin-left: 10px; color: white; border: none; border-radius: 6px;\n            cursor: pointer;\n            transition: background 0.2s;\n        }\n        .refresh-btn:hover { background: #218838; }\n        .json-result {\n            background: #f8f9fa; border: 1px solid #e1e5e9; border-radius: 6px;\n            padding: 16px; margin: 15px 0; overflow-x: auto;\n            font-family: 'Monaco', 'Consolas', monospace; font-size: 13px;\n            white-space: pre-wrap; max-height: 400px; overflow-y: auto;\n            line-height:"
+      "presentation/styles.py": "def get_styles() -> str:\n    \"\"\"Return the CSS styles for the interface.\"\"\"\n    return \"\"\"\n        :root {\n            --bg-color: #f8f9fa;\n            --text-color: #333333;\n            --primary-color: #0066cc;\n            --syntax-keyword: #00008b;\n            --syntax-string: #a31515;\n            --result-bg: #ffffff;\n            --result-text: #000000;\n        }\n        .dark-theme {\n            --bg-color: #1a1a1a;\n            --text-color: #e0e0e0;\n            --primary-color: #4da6ff;\n            --syntax-keyword: #569cd6;\n            --syntax-string: #d69d85;\n            --result-bg: #2a2a2a;\n            --result-text: #ffffff;\n        }\n        body { \n            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; \n            max-width: 1200px; margin: 0 auto; padding: 20px; \n            background-color: var(--bg-color);\n            color: var(--text-color);\n        }\n        .header { text-align: center; margin-bottom: 30px; }\n        .database-selector {\n            background: var(--result-bg); padding: 20px; border-radius: 8px; margin: 20px 0;\n            box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n            color: var(--text-color);\n        }\n        .database-grid {\n            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));\n            gap: 15px; margin-top: 15px;\n        }\n        .database-card {\n            border: 2px solid #e1e5e9; border-radius: 8px; padding: 15px;\n            cursor: pointer; transition: all 0.3s; background: var(--result-bg);\n            margin-bottom: 8px;\n            color: var(--text-color);\n        }\n        .database-card:hover {\n            border-color: var(--primary-color); background: #f0f7ff;\n            transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1);\n        }\n        .database-card.selected {\n            border-color: var(--primary-color); background: #e7f3ff;\n            box-shadow: 0 0 0 3px rgba(0,102,204,0.2);\n        }\n        .database-name {\n            font-weight: 600; font-size: 18px; margin-bottom: 5px;\n            color: var(--primary-color);\n        }\n        .database-type {\n            display: inline-block; padding: 3px 8px; border-radius: 12px;\n            font-size: 12px; font-weight: 500; margin-bottom: 8px;\n        }\n        .database-type.postgresql {\n            background: #336791; color: white;\n        }\n        .database-type.mongodb {\n            background: #13aa52; color: white;\n        }\n        .database-info {\n            color: #666; font-size: 14px; line-height: 1.4;\n        }\n        .database-status {\n            margin-top: 8px; font-size: 12px;\n        }\n        .status-connected { color: #13aa52; }\n        .status-error { color: #dc3545; }\n        .examples { \n            background: var(--result-bg); padding: 20px; border-radius: 8px; margin: 20px 0; \n            box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n            color: var(--text-color);\n        }\n        .input-section { \n            background: var(--result-bg); padding: 20px; border-radius: 8px; margin: 20px 0;\n            box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n            color: var(--text-color);\n        }\n        .selected-db-indicator {\n            background: #e7f3ff; padding: 10px 15px; border-radius: 6px;\n            margin-bottom: 15px; display: none; align-items: center; gap: 10px;\n            color: var(--text-color);\n        }\n        .selected-db-indicator.visible { display: flex; }\n        .chat { \n            background: var(--result-bg); border-radius: 8px; height: 500px; \n            padding: 20px; overflow-y: auto; margin: 20px 0;\n            box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n            color: var(--text-color);\n        }\n        .input-row { display: flex; gap: 10px; align-items: center; }\n        #question { \n            flex: 1; padding: 12px; border: 2px solid #e1e5e9; border-radius: 6px;\n            font-size: 16px; outline: none;\n            background: var(--result-bg);\n            color: var(--text-color);\n        }\n        #question:focus { border-color: var(--primary-color); }\n        #question:disabled { background: #f5f5f5; cursor: not-allowed; }\n        button { \n            padding: 12px 24px; background: var(--primary-color); color: white; border: none;\n            border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 600;\n            transition: background 0.2s;\n        }\n        button:hover:not(:disabled) { background: #0052a3; }\n        button:disabled { background: #ccc; cursor: not-allowed; }\n        .user-message { \n            background: var(--primary-color); color: white; padding: 12px 16px; \n            margin: 10px 0; border-radius: 18px 18px 4px 18px; max-width: 80%;\n            word-wrap: break-word;\n        }\n        .agent-message { \n            background: #f1f3f5; padding: 16px; margin: 10px 0; \n            border-radius: 18px 18px 18px 4px; max-width: 90%;\n            word-wrap: break-word;\n            color: var(--text-color);\n        }\n        .loading { \n            background: #fff3cd; padding: 12px; border-radius: 8px; \n            border-left: 4px solid #ffc107; margin: 10px 0;\n            color: var(--text-color);\n        }\n        .error { \n            background: #f8d7da; padding: 16px; border-radius: 8px; \n            border-left: 4px solid #dc3545; margin: 10px 0; color: #721c24;\n        }\n        .error-details {\n            background: var(--result-bg); padding: 12px; border-radius: 4px;\n            margin-top: 10px; font-family: monospace; font-size: 12px;\n            border: 1px solid #e1e5e9; white-space: pre-wrap;\n            max-height: 300px; overflow-y: auto;\n            color: var(--text-color);\n        }\n        .error-summary {\n            font-weight: bold; margin-bottom: 10px;\n        }\n        .error-expandable {\n            cursor: pointer; color: var(--primary-color); text-decoration: underline;\n            font-size: 12px; margin-top: 8px;\n        }\n        .error-expandable:hover { color: #0052a3; }\n        .query-error {\n            background: #fff3cd; padding: 15px; border-radius: 8px; \n            border-left: 4px solid #ffc107; margin: 15px 0; color: #856404;\n        }\n        table { \n            width: 100%; border-collapse: collapse; margin: 15px 0; \n            background: var(--result-bg); border-radius: 6px; overflow: hidden;\n            box-shadow: 0 1px 3px rgba(0,0,0,0.1);\n            color: var(--result-text);\n        }\n        th, td { \n            padding: 10px 12px; text-align: left; border-bottom: 1px solid #e1e5e9; \n            word-wrap: break-word;\n        }\n        th { background: #f8f9fa; font-weight: 600; color: #495057; }\n        tr:hover { background: #f8f9fa; }\n        code { \n            background: #f1f3f5; padding: 2px 6px; border-radius: 4px; \n            font-family: 'Monaco', 'Consolas', monospace; font-size: 14px;\n            color: var(--text-color);\n        }\n        pre { \n            background: var(--result-bg); padding: 16px; border-radius: 6px; \n            overflow-x: auto; border: 1px solid #e1e5e9; margin: 15px 0;\n            white-space: pre-wrap; line-height: 1.5;\n            color: var(--result-text);\n        }\n        pre code {\n            background: transparent; padding: 0; border-radius: 0;\n            white-space: pre-wrap; word-wrap: break-word;\n            color: var(--result-text);\n        }\n        /* Syntax highlighting */\n        .syntax-keyword { color: var(--syntax-keyword); font-weight: 600; }\n        .syntax-string { color: var(--syntax-string); }\n        .example-btn {\n            background: #f8f9fa; border: 1px solid #e1e5e9; padding: 8px 12px;\n            border-radius: 20px; cursor: pointer; margin: 4px; display: inline-block;\n            font-size: 14px; color: #495057; transition: all 0.2s;\n        }\n        .example-btn:hover { background: #e9ecef; transform: translateY(-1px); }\n        h3 { color: var(--primary-color); margin: 20px 0 10px 0; }\n        h4 { color: #333; margin: 15px 0 8px 0; }\n        ul { margin: 10px 0; padding-left: 20px; }\n        li { margin: 5px 0; }\n        .no-database-warning {\n            background: #fff3cd; padding: 15px; border-radius: 8px;\n            border-left: 4px solid #ffc107; margin: 20px 0;\n            display: none;\n            color: var(--text-color);\n        }\n        .no-database-warning.visible { display: block; }\n        .refresh-btn {\n            background: #28a745; padding: 8px 16px; font-size: 14px;\n            margin-left: 10px;\n            color: white;\n            border: none;\n            border-radius: 6px;\n            cursor: pointer;\n            transition: background 0.2s;\n        }\n        .refresh-btn:hover { background: #218838; }\n        .json-result {\n            background: var(--result-bg); border: 1px solid #e1e5e9; border-radius: 6px;\n            padding: 16px; margin: 15px 0; overflow-x: auto;\n            font-family: 'Monaco', 'Consolas', monospace; font-size: 13px;\n            white-space: pre-wrap; max-height: 400px; overflow-y: auto;\n            line-height: 1.4;\n            color: var(--result-text);\n        }\n        .mongo-query {\n            background: #e8f5e8; border: 1px solid #13aa52; border-radius: 6px;\n            padding: 16px; margin: 15px 0; font-family: 'Monaco', 'Consolas', monospace;\n            font-size: 14px; white-space: pre-wrap;\n            color: var(--text-color);\n        }\n        .sql-query {\n            background: #e6f3ff; border: 1px solid #336791; border-radius: 6px;\n            padding: 16px; margin: 15px 0; font-family: 'Monaco', 'Consolas', monospace;\n            font-size: 14px; white-space: pre-wrap;\n            color: var(--text-color);\n        }\n        .tips-section {\n            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\n            color: white; padding: 20px; border-radius: 8px; margin: 20px 0;\n        }\n        .tips-section h3 { color: white; margin-top: 0; }\n        .tip-item { \n            background: rgba(255,255,255,0.1); padding: 10px; border-radius: 6px; \n            margin: 8px 0; font-size: 14px;\n        }\n        /* Theme toggle button */\n        .theme-toggle-btn {\n            padding: 8px 16px;\n            border: 2px solid var(--primary-color);\n            background: transparent;\n            color: var(--primary-color);\n            border-radius: 6px;\n            cursor: pointer;\n            font-size: 14px;\n            font-weight: 600;\n            transition: background 0.2s, color 0.2s;\n            user-select: none;\n        }\n        .theme-toggle-btn:hover {\n            background: var(--primary-color);\n            color: var(--result-bg);\n        }\n    \"\"\"",
+      "presentation/html_template.py": "def get_html_template(api_key: str, styles: str, javascript: str) -> str:\n    \"\"\"Generate the main HTML template structure.\"\"\"\n    return f\"\"\"<!DOCTYPE html>\n<html>\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Multi-Database Query Agent</title>\n    <script src=\"https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js\"></script>\n    <script src=\"https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js\"></script>\n    <link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css\">\n    <style>\n        {styles}\n    </style>\n</head>\n<body>\n    <div class=\"header\">\n        <h1>\ud83e\udd16 Multi-Database Query Agent</h1>\n        <p>Select a database and ask questions in natural language!</p>\n        <button id=\"theme-toggle\" class=\"theme-toggle-btn\">\ud83c\udf19 Dark Mode</button>\n    </div>\n\n    <div class=\"database-selector\">\n        <h3>\ud83d\udcca Available Databases</h3>\n        <div id=\"database-grid\" class=\"database-grid\">\n            <!-- Databases will be loaded here -->\n        </div>\n        <button class=\"refresh-btn\" onclick=\"loadDatabases()\">\ud83d\udd04 Refresh Databases</button>\n    </div>\n\n    <div class=\"no-database-warning\" id=\"no-database-warning\">\n        Please select a database first before asking questions.\n    </div>\n\n    <div class=\"tips-section\">\n        <h3>Query Guidelines</h3>\n        <div class=\"tip-item\">This system is read-only - ask questions to retrieve and analyze data</div>\n        <div class=\"tip-item\">Write operations (INSERT, UPDATE, DELETE) are not allowed</div>\n        <div class=\"tip-item\">Use phrases like \"show me\", \"find\", \"count\", \"list\", \"get\", \"analyze\"</div>\n        <div class=\"tip-item\">Be specific about what data you want to see</div>\n    </div>\n\n    <div class=\"examples\">\n        <h3>Try these examples:</h3>\n        <div class=\"example-btn\" onclick=\"setQuestion('Show me 5 records')\">Show me 5 records</div>\n        <div class=\"example-btn\" onclick=\"setQuestion('What are the most common categories?')\">What are the most common categories?</div>\n        <div class=\"example-btn\" onclick=\"setQuestion('Count records by type')\">Count records by type</div>\n        <div class=\"example-btn\" onclick=\"setQuestion('Find records from 2020')\">Find records from 2020</div>\n    </div>\n\n    <div class=\"input-section\">\n        <div class=\"selected-db-indicator\" id=\"selected-db-indicator\">\n            <strong>Selected Database:</strong>\n            <span id=\"selected-db-name\"></span>\n            <span id=\"selected-db-type\"></span>\n        </div>\n        <div class=\"input-row\">\n            <input type=\"text\" id=\"question\" placeholder=\"Select a database first, then ask a question...\" disabled />\n            <button id=\"ask-btn\" onclick=\"askQuestion()\" disabled>Ask</button>\n        </div>\n    </div>\n\n    <div id=\"chat\" class=\"chat\"></div>\n\n    <script>\n        {javascript}\n    </script>\n    <script>\n        (function() {{\n            const toggleBtn = document.getElementById('theme-toggle');\n            const body = document.body;\n\n            function setTheme(theme) {{\n                if (theme === 'dark') {{\n                    body.classList.add('dark-theme');\n                    toggleBtn.textContent = '\u2600\ufe0f Light Mode';\n                }} else {{\n                    body.classList.remove('dark-theme');\n                    toggleBtn.textContent = '\ud83c\udf19 Dark Mode';\n                }}\n                localStorage.setItem('theme', theme);\n            }}\n\n            // Initialize theme on page load\n            const storedTheme = localStorage.getItem('theme');\n            if (storedTheme === 'dark') {{\n                setTheme('dark');\n            }} else {{\n                setTheme('light');\n            }}\n\n            toggleBtn.addEventListener('click', function() {{\n                if (body.classList.contains('dark-theme')) {{\n                    setTheme('light');\n                }} else {{\n                    setTheme('dark');\n                }}\n            }});\n        }})();\n    </script>\n</body>\n</html>\"\"\""
     },
     "relevant_files": [],
     "code_patterns": []
   },
   "testing": {
-    "test_files": [],
-    "test_results": {}
+    "test_files": [
+      "tests/test_theme_toggle.py"
+    ],
+    "test_results": {
+      "total_tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    }
   },
   "pr": {
     "pr_id": "",
@@ -155,7 +196,7 @@
     {
       "agent": "Orchestrator",
       "action": "Execution plan created",
-      "result": "2 steps, Branch: feature/dark-light-theme-toggle",
+      "result": "3 steps, Branch: feature/dark-light-theme-toggle",
       "success": true,
       "state": "planning"
     },
@@ -183,60 +224,81 @@
     {
       "agent": "CodeAgent",
       "action": "Executing step 1",
-      "result": "Add CSS styles for both dark and light themes directly in presentation/web_ui.py, including styles for query syntax highlighting and result panels to ensure legibility.",
+      "result": "Add theme CSS variables and update presentation/styles.py to support light and dark themes",
       "success": true,
       "state": "creating_branch"
     },
     {
       "agent": "CodeAgent",
       "action": "Updating file",
-      "result": "presentation/web_ui.py",
+      "result": "presentation/styles.py",
       "success": true,
       "state": "implementing"
     },
     {
       "agent": "CodeAgent",
       "action": "File updated",
-      "result": "presentation/web_ui.py (8440 chars)",
+      "result": "presentation/styles.py (10704 chars)",
       "success": true,
       "state": "implementing"
     },
     {
       "agent": "CodeAgent",
       "action": "Executing step 2",
-      "result": "Implement a theme toggle control in the UI rendered by web_ui.py and embed JavaScript to handle theme switching and persist the user's choice in local storage.",
+      "result": "Add theme toggle button to the base HTML template and integrate JavaScript for toggle and persistence",
       "success": true,
       "state": "implementing"
     },
     {
       "agent": "CodeAgent",
       "action": "Updating file",
-      "result": "presentation/web_ui.py",
+      "result": "presentation/html_template.py",
       "success": true,
       "state": "implementing"
     },
     {
       "agent": "CodeAgent",
       "action": "File updated",
-      "result": "presentation/web_ui.py (8440 chars)",
+      "result": "presentation/html_template.py (4037 chars)",
       "success": true,
       "state": "implementing"
+    },
+    {
+      "agent": "TestAgent",
+      "action": "Executing step 3",
+      "result": "Add unit tests for theme toggle functionality and persistence",
+      "success": true,
+      "state": "implementing"
+    },
+    {
+      "agent": "TestAgent",
+      "action": "Creating test file",
+      "result": "tests/test_theme_toggle.py",
+      "success": true,
+      "state": "testing"
+    },
+    {
+      "agent": "TestAgent",
+      "action": "Test file created",
+      "result": "tests/test_theme_toggle.py (6982 chars)",
+      "success": true,
+      "state": "testing"
     },
     {
       "agent": "TestAgent",
       "action": "Running tests",
-      "result": "0 test files",
+      "result": "1 test files",
       "success": true,
-      "state": "implementing"
+      "state": "testing"
     },
     {
       "agent": "TestAgent",
-      "action": "No tests to run",
-      "result": "",
+      "action": "Tests complete",
+      "result": "1/1 passed",
       "success": true,
-      "state": "implementing"
+      "state": "testing"
     }
   ],
   "errors": [],
-  "current_state": "implementing"
+  "current_state": "testing"
 }
