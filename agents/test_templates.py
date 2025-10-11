@@ -1,5 +1,5 @@
 """
-Test Templates and Patterns for TDD
+Test Templates and Patterns
 
 Provides proven test patterns that TestAgent can follow
 """

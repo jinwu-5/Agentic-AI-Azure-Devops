@@ -416,7 +416,23 @@ Focus on making minimal, surgical edits."""
         instructions_text = '\n'.join(f"- {item}" for item in instructions)
         structure = self.rag.get_project_structure()
 
-        system_prompt = """You are an expert software engineer editing an existing file.
+        # Check if file contains f-string templates (needs special handling)
+        is_fstring_template = 'f"""' in current_content or "f'''" in current_content
+
+        if is_fstring_template:
+            system_prompt = """You are an expert software engineer editing a Python file containing f-string templates.
+
+                CRITICAL: This file uses f-string syntax (f\"\"\" or f''').
+                
+                F-STRING BRACE ESCAPING RULES:
+                1. Single braces {{ }} must be DOUBLED to escape them: {{{{ }}}}
+                2. This is required for JavaScript, CSS, HTML code inside Python f-strings
+                3. Example: JavaScript function() {{ return true; }} becomes function() {{{{ return true; }}}}
+                4. Python variables in f-strings use single braces: {variable_name}
+                
+                Apply the requested changes while preserving ALL brace escaping. Return the full updated file content."""
+        else:
+            system_prompt = """You are an expert software engineer editing an existing file.
             Apply the requested changes while preserving intended behaviour. Return the full updated file content."""
 
         user_prompt = f"""Update the existing file according to the following instructions:
@@ -446,6 +462,13 @@ Focus on making minimal, surgical edits."""
                                                 timeout=max(180, max_tokens // 50))  # Dynamic timeout
             updated_content = self._clean_ai_response(updated_content)
             print(f"  ✓ Received updated content ({len(updated_content)} chars)")
+
+            # Validate f-string brace escaping if needed
+            if is_fstring_template:
+                brace_fix_result = self._fix_fstring_braces(updated_content, current_content)
+                if brace_fix_result['fixed']:
+                    print(f"  ⚠️  Auto-fixed {brace_fix_result['fixes_applied']} brace escaping issues")
+                    updated_content = brace_fix_result['content']
 
             validation_result = self._validate_file_output(
                 file_path, current_content, updated_content
@@ -520,7 +543,24 @@ Focus on making minimal, surgical edits."""
                     else:  # Single line: "45"
                         current_change['line'] = int(line_spec)
                 elif line.startswith('ACTION:'):
-                    current_change['action'] = line.replace('ACTION:', '').strip()
+                    # Parse action - may include line range like "REPLACE_LINES 100-115"
+                    action_spec = line.replace('ACTION:', '').strip()
+
+                    # Check if action contains line range (e.g., "REPLACE_LINES 100-115")
+                    action_parts = action_spec.split()
+                    action_type = action_parts[0]  # First word is the action
+                    current_change['action'] = action_type
+
+                    # If there's a line range in the action, parse it
+                    if len(action_parts) > 1 and '-' in action_parts[1]:
+                        line_range = action_parts[1]
+                        start, end = line_range.split('-')
+                        current_change['line_start'] = int(start.strip())
+                        current_change['line_end'] = int(end.strip())
+                    elif len(action_parts) > 1:
+                        # Single line number after action
+                        current_change['line'] = int(action_parts[1])
+
                 elif line.startswith('CODE:'):
                     current_change['in_code_block'] = True
                 elif line == '---':
@@ -640,7 +680,22 @@ Focus on making minimal, surgical edits."""
                 'error': 'Generated content is nearly empty'
             }
 
-        # Check 3: File type-specific validation
+        # Check 3: Python syntax validation (compile check)
+        if file_path.endswith('.py'):
+            try:
+                compile(generated, file_path, 'exec')
+            except SyntaxError as se:
+                return {
+                    'valid': False,
+                    'error': f'Python syntax error: {se.msg} at line {se.lineno}'
+                }
+            except Exception as e:
+                return {
+                    'valid': False,
+                    'error': f'Python compilation error: {str(e)}'
+                }
+
+        # Check 4: File type-specific validation
         if file_path.endswith('.py'):
             # Python files should have proper indentation and structure
             if generated.count('def ') == 0 and original.count('def ') > 0:
@@ -715,6 +770,90 @@ Focus on making minimal, surgical edits."""
 
         # All checks passed
         return {'valid': True, 'error': None}
+
+    def _fix_fstring_braces(self, generated_content: str, original_content: str) -> Dict[str, Any]:
+        """Auto-fix common f-string brace escaping issues"""
+        import re
+
+        fixes_applied = 0
+        fixed_content = generated_content
+
+        # Extract JavaScript/CSS blocks that need brace escaping
+        # Look for patterns like: function() { ... } that should be function() {{ ... }}
+
+        # Find f-string template boundaries
+        fstring_pattern = r'(f""".*?"""|f\'\'\'.*?\'\'\')'
+
+        # Within f-strings, find JavaScript/CSS patterns with single braces
+        # But avoid touching Python variable interpolations like {variable_name}
+
+        # Strategy: Look for common JavaScript/CSS patterns with unescaped braces
+        # 1. function() { return ... } -> function() {{ return ... }}
+        # 2. .class { property: value; } -> .class {{ property: value; }}
+        # 3. if (...) { ... } -> if (...) {{ ... }}
+
+        # This is a simple heuristic - look for { or } that aren't already doubled
+        # and aren't Python variable names
+
+        lines = fixed_content.split('\n')
+        in_fstring = False
+
+        for i, line in enumerate(lines):
+            # Detect f-string start
+            if 'f"""' in line or "f'''" in line:
+                in_fstring = True
+
+            if in_fstring:
+                # Look for JavaScript/CSS patterns needing escape
+                # Pattern: word followed by single { or single } not already escaped
+
+                # Check if line has unescaped single braces in JS/CSS context
+                # Look for patterns like: }) or }; or }$ or function() { or .toggle('
+                js_css_indicators = ['function(', 'const ', 'let ', 'var ', '=>', '};', 'classList', 'addEventListener', 'getElementById']
+
+                has_js_css = any(indicator in line for indicator in js_css_indicators)
+
+                if has_js_css:
+                    # This line likely contains JavaScript/CSS
+                    # Fix unescaped braces: { -> {{ and } -> }}
+                    # But be careful not to touch Python interpolations
+
+                    # Simple approach: if line has JS keywords, double all single braces
+                    # that aren't part of {variable} patterns
+
+                    # Count braces
+                    original_line = line
+
+                    # Replace single { with {{ if not already doubled and not Python var
+                    # This is tricky - we need to avoid Python {var} patterns
+
+                    # Look for single braces not followed/preceded by braces
+                    line = re.sub(r'(?<!\{)\{(?!\{)(?![a-zA-Z_])', '{{', line)  # { not followed by { or identifier
+                    line = re.sub(r'(?<!\})\}(?!\})', '}}', line)  # } not preceded/followed by }
+
+                    if line != original_line:
+                        lines[i] = line
+                        fixes_applied += 1
+
+            # Detect f-string end
+            if '"""' in line[line.find('f"""')+4:] if 'f"""' in line else False:
+                in_fstring = False
+            if "'''" in line[line.find("f'''")+4:] if "f'''" in line else False:
+                in_fstring = False
+
+        if fixes_applied > 0:
+            fixed_content = '\n'.join(lines)
+            return {
+                'fixed': True,
+                'fixes_applied': fixes_applied,
+                'content': fixed_content
+            }
+
+        return {
+            'fixed': False,
+            'fixes_applied': 0,
+            'content': generated_content
+        }
 
     def _normalize_file_entries(self, files: Any) -> List[Dict[str, Any]]:
         """Normalize file entries from plan step"""

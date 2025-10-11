@@ -115,32 +115,32 @@ class DevOpsAgent(BaseAgent):
             context.add_error(f"Commit failed: {e}")
             return False
     
-    async def _generate_commit_message(self, context: WorkflowContext, 
+    async def _generate_commit_message(self, context: WorkflowContext,
                                       files: List[str]) -> str:
         """Use AI to generate a descriptive commit message"""
-        
+
         system_prompt = """You are a Git commit message expert.
             Generate clear, concise commit messages following conventional commits format.
-            
+
             Format: <type>: <description>
-            
+
             Types: feat, fix, refactor, docs, test, style, chore
-            
+
             Keep messages under 72 characters for the subject line."""
 
         file_list = "\n".join([f"- {f}" for f in files[:10]])
         if len(files) > 10:
             file_list += f"\n... and {len(files) - 10} more files"
-        
+
         user_prompt = f"""Generate a commit message for:
 
             Work Item: {context.work_item_title}
-            
+
             Files changed:
             {file_list}
-            
+
             Description: {context.work_item_description[:200]}
-            
+
             Respond with just the commit message, no explanation."""
 
         try:
@@ -151,6 +151,71 @@ class DevOpsAgent(BaseAgent):
         except:
             # Fallback message
             return f"feat: implement {context.work_item_title}"
+
+    async def _generate_testing_steps(self, context: WorkflowContext,
+                                     implementation_steps: List[Dict]) -> str:
+        """Use AI to generate specific, actionable manual testing steps"""
+
+        system_prompt = """You are a QA engineer writing manual testing instructions for code reviewers.
+
+            Generate specific, actionable testing steps based on what was actually implemented.
+            
+            Format as a numbered list:
+            1. First specific action to test
+            2. Second specific action to test
+            ...
+            
+            Focus on:
+            - User-facing functionality (what the user sees/does)
+            - Expected behavior (what should happen)
+            - Edge cases and error scenarios
+            - Integration points
+            
+            Be specific and concrete - NOT generic."""
+
+        # Build context about what was implemented
+        impl_summary = ""
+        for i, step in enumerate(implementation_steps, 1):
+            impl_summary += f"{i}. {step.get('description', 'N/A')}\n"
+
+        # Include acceptance criteria
+        criteria_text = "\n".join(f"- {c}" for c in context.acceptance_criteria[:5])
+
+        user_prompt = f"""Generate manual testing steps for this implementation:
+
+            Work Item: {context.work_item_title}
+            
+            Description: {context.work_item_description[:300]}
+            
+            Acceptance Criteria:
+            {criteria_text}
+            
+            Implementation Steps:
+            {impl_summary}
+            
+            Files Changed:
+            {chr(10).join(f'- {f}' for f in list(context.implementation_files.keys())[:5])}
+            
+            Generate 4-6 specific testing steps that a reviewer can follow.
+            Include the actual UI elements, expected behaviors, and edge cases to test.
+            
+            Respond with ONLY the numbered testing steps, no introduction or conclusion."""
+
+        try:
+            response = await self.call_ai(system_prompt, user_prompt,
+                                         temperature=0.2, max_tokens=800)
+            # Clean up the response
+            testing_steps = response.strip()
+
+            # Ensure it starts with a number
+            if not testing_steps[0].isdigit():
+                lines = testing_steps.split('\n')
+                testing_steps = '\n'.join(line for line in lines if line.strip() and (line.strip()[0].isdigit() or line.strip().startswith('-')))
+
+            return testing_steps + "\n"
+        except Exception as e:
+            # Fallback to basic steps
+            return f"1. Pull the branch: `git checkout {context.branch_name}`\n2. Review the changes in the modified files\n3. Test the functionality described in the work item\n4. Verify acceptance criteria are met\n"
     
     async def push_to_remote(self, context: WorkflowContext,
                             remote_name: str = "origin") -> bool:
@@ -260,7 +325,7 @@ class DevOpsAgent(BaseAgent):
                         pr_description += f"- {step.get('description', 'N/A')}\n"
                     pr_description += "\n"
 
-            # Add manual testing steps (always include)
+            # Add manual testing steps - use AI to generate specific, actionable steps
             pr_description += "## Manual Testing Steps\n"
 
             # Check if there's a predefined test plan
@@ -268,22 +333,9 @@ class DevOpsAgent(BaseAgent):
             if test_plan:
                 pr_description += f"{test_plan}\n"
             else:
-                # Generate basic manual testing steps based on implementation
-                pr_description += "1. Pull the branch and verify the code changes\n"
-                pr_description += "2. Review the implementation against acceptance criteria\n"
-
-                if context.implementation_files:
-                    pr_description += "3. Test the modified functionality:\n"
-                    for file_path in list(context.implementation_files.keys())[:3]:  # Show first 3 files
-                        pr_description += f"   - Verify changes in `{file_path}`\n"
-
-                if test_steps:
-                    pr_description += "4. Run automated tests and verify all pass\n"
-                    pr_description += "5. Perform integration testing with related components\n"
-                else:
-                    pr_description += "4. Perform integration testing with related components\n"
-
-                pr_description += f"6. Verify the changes address Work Item #{context.work_item_id}\n"
+                # Use AI to generate specific testing steps based on what was implemented
+                testing_steps = await self._generate_testing_steps(context, steps)
+                pr_description += testing_steps
 
             # Generate PR title
             pr_title = f"{context.work_item_title} (Work Item #{context.work_item_id})"
@@ -313,7 +365,7 @@ class DevOpsAgent(BaseAgent):
                 pr_params
             )
 
-            print(f"[{self.name}] MCP Result: {result}")
+            # Suppress verbose MCP output - just log success/failure below
 
             if "result" in result:
                 # Parse PR response - MCP returns data in content array

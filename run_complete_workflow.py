@@ -3,6 +3,7 @@ Complete end-to-end workflow with --reindex support
 """
 
 import asyncio
+import os
 import sys
 from openai import AzureOpenAI
 from config import SystemConfig
@@ -86,6 +87,14 @@ async def main():
     print("\n" + "="*60)
     print("PHASE 2: BRANCH CREATION")
     print("="*60)
+
+    # Clean up RAG cache before git operations to prevent checkout conflicts
+    import shutil
+    rag_cache_path = os.path.join(config.repository_path, ".rag_db")
+    if os.path.exists(rag_cache_path):
+        print(f"[Cleanup] Removing RAG cache to prevent git conflicts: {rag_cache_path}")
+        shutil.rmtree(rag_cache_path)
+
     if not await devops_agent.create_feature_branch(context):
         print("✗ Branch creation failed")
         await mcp_manager.cleanup()
