@@ -182,7 +182,7 @@ class CodeAgent(BaseAgent):
         file_size = len(current_content)
 
         # Determine best editing strategy
-        strategy = self._select_edit_strategy(file_size, description, instructions)
+        strategy = self._select_edit_strategy(file_size, description, instructions, current_content)
 
         print(f"  File: {file_size} chars, Strategy: {strategy}")
 
@@ -198,8 +198,17 @@ class CodeAgent(BaseAgent):
             )
 
     def _select_edit_strategy(self, file_size: int, description: str,
-                              instructions: List[str]) -> str:
+                              instructions: List[str], current_content: str = "") -> str:
         """Determine the best editing strategy based on file characteristics"""
+
+        # CRITICAL: f-strings are incompatible with LINE-based diffs
+        # AI doesn't know it's inside an f-string and won't escape {} braces
+        # Force full rewrite for files that are f-string templates
+        if current_content:
+            # Detect f-string patterns: f""" or f'''
+            if 'f"""' in current_content or "f'''" in current_content:
+                print("  ⚠️  File contains f-string template - using full rewrite")
+                return "full"
 
         # Check if changes are localized (specific keywords suggest targeted edits)
         instructions_text = ' '.join(instructions).lower()
@@ -230,43 +239,72 @@ class CodeAgent(BaseAgent):
 
         system_prompt = """You are an expert software engineer creating surgical edits to code.
 
-IMPORTANT: Instead of rewriting the entire file, provide SPECIFIC CHANGES in this format:
+CRITICAL: Instead of rewriting the entire file, provide SPECIFIC LINE-BASED CHANGES.
 
-1. Identify the EXACT location where changes should be made
-2. Provide the code to ADD or REPLACE
-3. Be precise about insertion points
+The file is shown with LINE NUMBERS. Reference exact line numbers for precision.
 
 Response format:
 ```
 CHANGE 1: [Brief description]
-LOCATION: [Specific line/section identifier]
-ACTION: [INSERT_BEFORE / INSERT_AFTER / REPLACE]
+LINE: [line number where change happens]
+ACTION: INSERT_BEFORE | INSERT_AFTER | REPLACE_LINE | REPLACE_LINES [start]-[end]
 CODE:
 [exact code to insert/replace]
 ---
-CHANGE 2: ...
 ```
 
-Example for adding CSS:
+Examples:
 ```
 CHANGE 1: Add dark theme CSS
-LOCATION: After the light theme styles, before </style>
+LINE: 45
 ACTION: INSERT_BEFORE
 CODE:
-        /* Dark theme styles */
-        @media (prefers-color-scheme: dark) {
-            body { background: #121212; color: #e0e0e0; }
+        .dark-theme {
+            --bg-color: #1a1a1a;
         }
 ---
-```"""
 
-        # For diff-based, show a preview of the file to help AI locate things
-        file_preview = current_content
+CHANGE 2: Update function return
+LINE: 78
+ACTION: REPLACE_LINE
+CODE:
+    return {"status": "success", "data": result}
+---
+
+CHANGE 3: Replace entire function
+LINE: 100-115
+ACTION: REPLACE_LINES
+CODE:
+def new_function():
+    return "updated"
+---
+```
+
+RULES:
+- Use LINE numbers from the file shown below
+- Be precise - wrong line numbers will fail
+- For INSERT, code goes before/after that line
+- For REPLACE_LINE, replaces that one line
+- For REPLACE_LINES X-Y, replaces lines X through Y inclusive"""
+
+        # For diff-based, show file with line numbers to help AI specify exact lines
+        lines = current_content.split('\n')
+
         if len(current_content) > 3000:
-            # For large files, show first 1500 and last 1500 chars
-            file_preview = (current_content[:1500] +
-                          f"\n\n... ({len(current_content) - 3000} chars omitted) ...\n\n" +
-                          current_content[-1500:])
+            # For large files, show first 75 and last 75 lines with line numbers
+            first_lines = lines[:75]
+            last_lines = lines[-75:]
+            total_lines = len(lines)
+
+            numbered_first = '\n'.join(f"{i+1:4d} | {line}" for i, line in enumerate(first_lines))
+            numbered_last = '\n'.join(f"{total_lines-75+i+1:4d} | {line}" for i, line in enumerate(last_lines))
+
+            file_preview = (numbered_first +
+                          f"\n\n... (lines 76-{total_lines-75} omitted, total {total_lines} lines) ...\n\n" +
+                          numbered_last)
+        else:
+            # For small files, show all lines with numbers
+            file_preview = '\n'.join(f"{i+1:4d} | {line}" for i, line in enumerate(lines))
 
         user_prompt = f"""Make targeted changes to this file:
 
@@ -276,10 +314,10 @@ Purpose: {description}
 Instructions:
 {instructions_text}
 
-Current file is {len(current_content)} characters. DO NOT rewrite the entire file.
-Provide ONLY the specific changes needed using the format specified.
+Current file has {len(lines)} lines, {len(current_content)} characters. DO NOT rewrite the entire file.
+Provide ONLY the specific changes needed using the LINE-based format specified.
 
-CURRENT FILE CONTENT (for reference when specifying LOCATION):
+CURRENT FILE CONTENT (with line numbers):
 ```
 {file_preview}
 ```
@@ -287,8 +325,8 @@ CURRENT FILE CONTENT (for reference when specifying LOCATION):
 Project Context:
 {rag_context}
 
-CRITICAL: For LOCATION, copy the EXACT text from the file above where the change should happen.
-Focus on making minimal, precise edits."""
+CRITICAL: Use the LINE numbers shown above (left column). Be precise with line numbers.
+Focus on making minimal, surgical edits."""
 
         try:
             # Use much smaller token limit since we're not rewriting whole file
@@ -457,7 +495,7 @@ Focus on making minimal, precise edits."""
     def _apply_diff_instructions(self, original_content: str,
                                   diff_instructions: str,
                                   file_path: str) -> str:
-        """Parse and apply diff-style instructions to modify file content"""
+        """Parse and apply LINE-based diff instructions to modify file content"""
 
         try:
             # Parse the diff instructions into structured changes
@@ -472,8 +510,15 @@ Focus on making minimal, precise edits."""
                         changes.append(current_change)
                     current_change = {'description': line}
                     current_change['code_lines'] = []
-                elif line.startswith('LOCATION:'):
-                    current_change['location'] = line.replace('LOCATION:', '').strip()
+                elif line.startswith('LINE:'):
+                    # Parse line specification: "45" or "100-115"
+                    line_spec = line.replace('LINE:', '').strip()
+                    if '-' in line_spec:  # Range: "100-115"
+                        start, end = line_spec.split('-')
+                        current_change['line_start'] = int(start.strip())
+                        current_change['line_end'] = int(end.strip())
+                    else:  # Single line: "45"
+                        current_change['line'] = int(line_spec)
                 elif line.startswith('ACTION:'):
                     current_change['action'] = line.replace('ACTION:', '').strip()
                 elif line.startswith('CODE:'):
@@ -492,51 +537,73 @@ Focus on making minimal, precise edits."""
 
             print(f"  Parsed {len(changes)} changes from diff instructions")
 
-            # Apply changes to content
-            modified_content = original_content
+            # Apply changes to content by line number
+            lines = original_content.split('\n')
             changes_applied = 0
             changes_skipped = 0
 
+            # Sort changes by line number (descending) to avoid offset issues
+            changes.sort(key=lambda c: c.get('line_start', c.get('line', 999999)), reverse=True)
+
             for i, change in enumerate(changes, 1):
                 action = change.get('action', '').upper()
-                location = change.get('location', '')
                 code = '\n'.join(change.get('code_lines', []))
 
-                print(f"    Change {i}: {action} at '{location[:50]}...'")
+                if 'line' in change:
+                    line_num = change['line']
+                    print(f"    Change {i}: {action} at line {line_num}")
 
-                # Try to find location using fuzzy matching
-                found_location = self._find_location_fuzzy(modified_content, location)
+                    if line_num < 1 or line_num > len(lines) + 1:
+                        print(f"      ⚠️  Line {line_num} out of range (1-{len(lines)}), skipping")
+                        changes_skipped += 1
+                        continue
 
-                if not found_location:
-                    print(f"      ⚠️  Location not found (tried exact + fuzzy), skipping")
-                    changes_skipped += 1
-                    continue
+                    if action == 'INSERT_BEFORE':
+                        # Insert code before the specified line
+                        lines.insert(line_num - 1, code)
+                        changes_applied += 1
+                        print(f"      ✓ Inserted before line {line_num}")
 
-                if action == 'INSERT_BEFORE':
-                    # Find location and insert before it
-                    modified_content = modified_content.replace(
-                        found_location, code + '\n' + found_location, 1
-                    )
-                    changes_applied += 1
-                    print(f"      ✓ Applied")
+                    elif action == 'INSERT_AFTER':
+                        # Insert code after the specified line
+                        lines.insert(line_num, code)
+                        changes_applied += 1
+                        print(f"      ✓ Inserted after line {line_num}")
 
-                elif action == 'INSERT_AFTER':
-                    # Find location and insert after it
-                    modified_content = modified_content.replace(
-                        found_location, found_location + '\n' + code, 1
-                    )
-                    changes_applied += 1
-                    print(f"      ✓ Applied")
+                    elif action == 'REPLACE_LINE':
+                        # Replace the specified line
+                        lines[line_num - 1] = code
+                        changes_applied += 1
+                        print(f"      ✓ Replaced line {line_num}")
 
-                elif action == 'REPLACE':
-                    # Replace the location text with new code
-                    modified_content = modified_content.replace(
-                        found_location, code, 1
-                    )
-                    changes_applied += 1
-                    print(f"      ✓ Applied")
+                    else:
+                        print(f"      ⚠️  Unknown action '{action}' for single line, skipping")
+                        changes_skipped += 1
+
+                elif 'line_start' in change and 'line_end' in change:
+                    start = change['line_start']
+                    end = change['line_end']
+                    print(f"    Change {i}: {action} at lines {start}-{end}")
+
+                    if start < 1 or end > len(lines) or start > end:
+                        print(f"      ⚠️  Line range {start}-{end} invalid (1-{len(lines)}), skipping")
+                        changes_skipped += 1
+                        continue
+
+                    if action == 'REPLACE_LINES':
+                        # Replace lines start through end (inclusive)
+                        # Delete the range and insert new code
+                        del lines[start-1:end]
+                        lines.insert(start-1, code)
+                        changes_applied += 1
+                        print(f"      ✓ Replaced lines {start}-{end}")
+
+                    else:
+                        print(f"      ⚠️  Unknown action '{action}' for line range, skipping")
+                        changes_skipped += 1
+
                 else:
-                    print(f"      ⚠️  Unknown action '{action}', skipping")
+                    print(f"    Change {i}: Missing LINE specification, skipping")
                     changes_skipped += 1
 
             print(f"  Summary: {changes_applied} applied, {changes_skipped} skipped")
@@ -546,49 +613,14 @@ Focus on making minimal, precise edits."""
                 print(f"  ⚠️  No changes were applied - diff strategy failed")
                 return None
 
+            modified_content = '\n'.join(lines)
             return modified_content
 
         except Exception as e:
             print(f"  ⚠️  Error applying diff instructions: {e}")
+            import traceback
+            traceback.print_exc()
             return None
-
-    def _find_location_fuzzy(self, content: str, location: str) -> str:
-        """Find location in content using exact match first, then fuzzy matching"""
-
-        # Try 1: Exact match
-        if location in content:
-            return location
-
-        # Try 2: Normalize whitespace and try again
-        normalized_location = ' '.join(location.split())
-        for line in content.split('\n'):
-            normalized_line = ' '.join(line.split())
-            if normalized_location in normalized_line:
-                return line.strip()
-
-        # Try 3: Find by partial match (first 30 chars)
-        if len(location) > 30:
-            prefix = location[:30].strip()
-            for line in content.split('\n'):
-                if prefix in line:
-                    return line.strip()
-
-        # Try 4: Find by keywords (extract words, match lines with most keywords)
-        words = [w for w in location.split() if len(w) > 3][:5]
-        if words:
-            best_match = None
-            best_score = 0
-
-            for line in content.split('\n'):
-                score = sum(1 for word in words if word in line)
-                if score > best_score and score >= len(words) // 2:
-                    best_score = score
-                    best_match = line.strip()
-
-            if best_match:
-                return best_match
-
-        return None
 
     def _validate_file_output(self, file_path: str, original: str, generated: str) -> Dict[str, Any]:
         """Validate that generated file content is complete and not truncated"""

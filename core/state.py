@@ -45,6 +45,9 @@ class WorkflowContext:
     test_files: List[str] = field(default_factory=list)
     test_results: Dict[str, Any] = field(default_factory=dict)
 
+    # Validation Information
+    validation_results: Dict[str, Any] = field(default_factory=dict)
+
     # PR Information
     pr_url: str = ""
     pr_id: str = ""

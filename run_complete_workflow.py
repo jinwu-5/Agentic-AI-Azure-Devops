@@ -7,7 +7,7 @@ import sys
 from openai import AzureOpenAI
 from config import SystemConfig
 from core import MCPConnectionManager, WorkflowContext
-from agents import OrchestratorAgent, DevOpsAgent, CodeAgent, TestAgent
+from agents import OrchestratorAgent, DevOpsAgent, CodeAgent, TestAgent, ValidationAgent
 from services import CodebaseRAG
 from utils import StateManager
 
@@ -65,6 +65,7 @@ async def main():
     devops_agent = DevOpsAgent(ai_client, config.deployment_name, mcp_manager, config.repository_path, config.repository_id)
     code_agent = CodeAgent(ai_client, config.deployment_name, mcp_manager, rag, config.repository_path)
     test_agent = TestAgent(ai_client, config.deployment_name, mcp_manager, rag, config.repository_path)
+    validation_agent = ValidationAgent(ai_client, config.deployment_name)
     
     # Create context
     context = WorkflowContext()
@@ -124,7 +125,19 @@ async def main():
     
     await test_agent.run_tests(context)
     state_mgr.save_context(context, "phase4_testing")
-    
+
+    # PHASE 4.5: Validation (after testing, before commit)
+    print("\n" + "="*60)
+    print("PHASE 4.5: VALIDATION")
+    print("="*60)
+
+    if not await validation_agent.execute(context):
+        print("✗ Validation failed - acceptance criteria not met")
+        print("  Review the validation results above and fix the implementation")
+        await mcp_manager.cleanup()
+        return
+    state_mgr.save_context(context, "phase4.5_validation")
+
     # PHASE 5: Commit & Push
     print("\n" + "="*60)
     print("PHASE 5: COMMIT & PUSH")

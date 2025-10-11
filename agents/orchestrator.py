@@ -81,7 +81,41 @@ class OrchestratorAgent(BaseAgent):
                 "sample_python_files": [],
                 "python_directories": []
             }
-    
+
+    def _get_architecture_patterns(self) -> str:
+        """Return architecture patterns based on project type"""
+        primary_lang = self._project_context.get("primary_language", "").lower()
+        frameworks = self._project_context.get("frameworks", [])
+        file_types = self._project_context.get("file_types", {})
+
+        # Detect project type from file structure
+        has_presentation = any("presentation" in path for path in self._project_context.get("sample_python_files", []))
+        has_html_py = ".html" in str(self._project_context.get("file_types", {})) or has_presentation
+
+        patterns = "## Architecture Patterns\n\n"
+
+        # Python Web UI Pattern (like this project)
+        if has_presentation or has_html_py:
+            patterns += """**Python-Rendered Web UI Pattern:**
+- CSS lives in Python files (e.g., `presentation/styles.py` returning CSS strings)
+- HTML lives in Python files (e.g., `presentation/html_template.py` returning HTML strings)
+- JavaScript must be INLINE in the HTML template (added via `<script>` tags in the template)
+- To add new styles: Modify the Python file that generates CSS
+- To add UI elements: Modify the Python file that generates HTML
+- To add interactivity: Add inline `<script>` tags in the HTML-generating Python file
+- All changes must modify EXISTING Python files that generate the web assets
+
+**CRITICAL - DO NOT create separate .css, .js, or .html files - they won't be loaded!**
+
+**Example - Adding a theme toggle:**
+1. Modify `presentation/styles.py` to add CSS variables and dark theme class
+2. Modify `presentation/html_template.py` to add toggle button HTML AND inline JavaScript
+3. Do NOT create `theme.js` or `theme.css` files
+
+"""
+
+        return patterns
+
     async def execute(self, context: WorkflowContext) -> bool:
         """Main execution flow for orchestrator"""
         try:
@@ -291,13 +325,15 @@ class OrchestratorAgent(BaseAgent):
             - Think end-to-end: How will the user actually USE this feature?
             - Don't create files that are never loaded/imported/used"""
 
-        # Note: We now allow common web file types even if not present
-        # So we don't need to restrict the AI as strictly
+        # Add architecture patterns based on project type
+        architecture_patterns = self._get_architecture_patterns()
+
         system_prompt += (
+            "\n\n" + architecture_patterns +  # ← Architecture patterns FIRST (more prominent)
             "\n\nProject context:\n"
             f"- Repository primary language: {self._project_context.get('primary_language')}\n"
-            f"- You can create files with common extensions (.py, .js, .css, .html, .json, etc.)\n"
-            "- Follow the existing project structure and naming conventions"
+            "- Follow the existing project structure and naming conventions\n"
+            "- Respect the architecture patterns above - they define which file types are allowed\n"
         )
 
         sample_files = '\n'.join(
@@ -394,7 +430,9 @@ class OrchestratorAgent(BaseAgent):
                 self.log(context, "Planning failed", "Could not parse AI response", False)
                 return False
 
+            # Filter and auto-fix invalid plan steps
             plan = self._filter_plan_steps(plan)
+            plan = self._auto_fix_architecture_violations(plan)
             context.execution_plan["implementation"] = plan
             context.branch_name = plan.get("branch_name", f"feature/story-{context.work_item_id}")
             
@@ -431,6 +469,80 @@ class OrchestratorAgent(BaseAgent):
             traceback.print_exc()
             return False
 
+    def _auto_fix_architecture_violations(self, plan: Dict[str, Any]) -> Dict[str, Any]:
+        """Auto-fix common architecture violations in the plan"""
+        # Check ALL indexed files, not just sample_python_files
+        all_files = []
+        if self.rag:
+            all_files = [chunk['file_path'] for chunk in self.rag.chunks]
+
+        has_presentation = any("presentation" in path for path in all_files)
+
+        if not has_presentation:
+            print("[Orchestrator] Not a Python Web UI project - skipping auto-fix")
+            return plan  # Not a Python Web UI project
+
+        print(f"[Orchestrator] Detected Python Web UI project (has presentation/ directory)")
+
+        print("[Orchestrator] Auto-fixing architecture violations...")
+
+        steps = plan.get("implementation_steps", [])
+        fixed_steps = []
+
+        for step in steps:
+            create_entries = self._normalize_plan_file_entries(step.get("files_to_create", []))
+            update_entries = self._normalize_plan_file_entries(step.get("files_to_update", []))
+
+            # Check if this step creates .js/.css/.html files
+            blocked_files = []
+            for entry in create_entries:
+                ext = os.path.splitext(entry["path"])[1].lower()
+                if ext in {'.js', '.css', '.html', '.htm'}:
+                    blocked_files.append(entry["path"])
+
+            if blocked_files:
+                print(f"[Orchestrator] Step {step.get('step')}: Found blocked files: {blocked_files}")
+                print(f"[Orchestrator]   Merging into html_template.py update instead")
+
+                # Instead of creating separate files, add instructions to html_template.py
+                html_template_entry = None
+                for entry in update_entries:
+                    if 'html_template.py' in entry["path"]:
+                        html_template_entry = entry
+                        break
+
+                if not html_template_entry:
+                    # Create new update entry for html_template.py
+                    html_template_entry = {
+                        "path": "presentation/html_template.py",
+                        "instructions": []
+                    }
+                    update_entries.append(html_template_entry)
+
+                # Add instruction to include JavaScript inline
+                for blocked_file in blocked_files:
+                    if blocked_file.endswith('.js'):
+                        html_template_entry["instructions"].append(
+                            f"Add inline JavaScript (NOT separate {blocked_file} file) before closing </body> tag with the theme toggle logic: "
+                            "(1) read theme from localStorage, (2) apply 'dark-theme' class to body if dark, "
+                            "(3) add click listener to toggle theme, (4) update localStorage, (5) update button text. "
+                            "Wrap in IIFE and escape curly braces as {{}} for f-string."
+                        )
+
+                # Remove blocked files from create list
+                create_entries = [e for e in create_entries if e["path"] not in blocked_files]
+
+                # Update step
+                step["files_to_create"] = create_entries
+                step["files_to_update"] = update_entries
+
+                print(f"[Orchestrator]   ✓ Fixed: Inline JavaScript in html_template.py")
+
+            fixed_steps.append(step)
+
+        plan["implementation_steps"] = fixed_steps
+        return plan
+
     def _filter_plan_steps(self, plan: Dict[str, Any]) -> Dict[str, Any]:
         """Remove implementation steps targeting unsupported file types"""
         allowed_exts: Set[str] = self._project_context.get("allowed_extensions", set())
@@ -438,6 +550,17 @@ class OrchestratorAgent(BaseAgent):
         filtered_steps = []
         removed_steps = []
         repo_path = getattr(self.rag, "repository_path", None) if self.rag else None
+
+        # Check if this is a Python Web UI project using ALL indexed files
+        all_files = []
+        if self.rag:
+            all_files = [chunk['file_path'] for chunk in self.rag.chunks]
+
+        has_presentation = any("presentation" in path for path in all_files)
+
+        print(f"[Orchestrator] Filtering plan steps...")
+        print(f"[Orchestrator]   Total indexed files: {len(all_files)}")
+        print(f"[Orchestrator]   has_presentation: {has_presentation}")
 
         for step in steps:
             create_entries = self._normalize_plan_file_entries(step.get("files_to_create"))
@@ -447,9 +570,29 @@ class OrchestratorAgent(BaseAgent):
             if step.get("agent") == "CodeAgent" and not (create_entries or update_entries):
                 invalid_reasons.append("No files_to_create or files_to_update provided")
 
+            # Filter out blocked files from create_entries
+            filtered_create_entries = []
             for entry in create_entries:
-                if not self._is_extension_allowed(entry["path"], allowed_exts):
-                    invalid_reasons.append(f"Unsupported extension: {entry['path']}")
+                path = entry["path"]
+
+                # CRITICAL: Block standalone .js/.css/.html files in Python Web UI projects
+                if has_presentation:
+                    ext = os.path.splitext(path)[1].lower()
+                    if ext in {'.js', '.css', '.html', '.htm'}:
+                        invalid_reasons.append(
+                            f"BLOCKED: Cannot create {path} - Python Web UI uses inline JS/CSS in .py files"
+                        )
+                        continue  # Skip this file, don't add to filtered list
+
+                if not self._is_extension_allowed(path, allowed_exts):
+                    invalid_reasons.append(f"Unsupported extension: {path}")
+                    continue  # Skip this file
+
+                # File is allowed, add to filtered list
+                filtered_create_entries.append(entry)
+
+            # Replace create_entries with filtered list
+            create_entries = filtered_create_entries
 
             # Auto-correct: Move non-existent files from updates to creates
             corrected_update_entries = []

@@ -146,6 +146,6 @@ This will:
 
 ## Future Enhancements
 - Implement test driven development as an option
-- Add LangGraph for complex workflow orchestration to try to improve code generation quality
 - Pull the code repo directly from Azure DevOps 
+- Add LangGraph for complex workflow orchestration for better coordination between agents
 - Move agent interactions creation into docker
