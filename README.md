@@ -86,18 +86,39 @@ Create a `.env` file:
     AZURE_DEVOPS_REPOSITORY_ID=your_repo_id
 ## Usage
 
-### Full Workflow
+### Web UI (Recommended)
+
+Start the web interface for an easy-to-use experience:
+
+    ./start_ui.sh
+
+Or manually:
+
+    source venv/bin/activate
+    python web_app.py
+
+Then open your browser to `http://localhost:5001`
+
+The Web UI provides:
+- Clean, modern interface
+- Real-time workflow output
+- Visual phase indicators
+- Progress tracking
+- Automatic summary of results
+- Pull request links
+
+### Command Line
 
     python run_complete_workflow.py
 
 This will:
-- Fetch work item from Azure DevOps  
-- Analyze and create execution plan  
-- Create feature branch  
-- Generate all implementation files  
-- Generate test files  
-- Commit changes locally  
-- Push to remote (with confirmation)  
+- Fetch work item from Azure DevOps
+- Analyze and create execution plan
+- Create feature branch
+- Generate all implementation files
+- Generate test files
+- Commit changes locally
+- Push to remote (with confirmation)
 - Create pull request (with confirmation)  
 
 ### Test Individual Agents (Cost Efficient)
@@ -145,7 +166,8 @@ This will:
 - **MCP connection failures** → Ensure Node.js is installed, MCP servers install automatically via `npx`  
 
 ## Future Enhancements
-- Implement test driven development as an option
+- Clean up 
 - Pull the code repo directly from Azure DevOps 
-- Add LangGraph for complex workflow orchestration for better coordination between agents
 - Move agent interactions creation into docker
+- Implement test driven development as an option
+- Add LangGraph for complex workflow orchestration for better coordination between agents
