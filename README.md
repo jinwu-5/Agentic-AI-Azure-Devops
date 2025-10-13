@@ -118,8 +118,8 @@ This will:
 - Generate all implementation files
 - Generate test files
 - Commit changes locally
-- Push to remote (with confirmation)
-- Create pull request (with confirmation)  
+- Push to remote
+- Create pull request  
 
 ### Test Individual Agents (Cost Efficient)
 
@@ -133,19 +133,26 @@ This will:
 
 ## Key Features
 
+### Flexible Validation
+- Validates implementations against acceptance criteria
+- Uses 80% threshold - workflow continues if 4 out of 5 criteria are met
+- Allows partial criteria and test failures with warnings
+- Doesn't block PR creation for minor issues
+- All validation results included in PR for manual review
+
 ### State Management
-- Saves workflow state at each phase  
-- Enables cheap iteration without re-running expensive operations  
-- Persists context across sessions  
+- Saves workflow state at each phase
+- Enables cheap iteration without re-running expensive operations
+- Persists context across sessions
 
 ### RAG Integration
-- Indexes existing codebase  
-- Provides relevant code patterns to agents  
-- Ensures generated code matches project style  
+- Indexes existing codebase
+- Provides relevant code patterns to agents
+- Ensures generated code matches project style
 
 ### Multi-Agent Orchestration
-- Each agent specializes in specific tasks  
-- Shared context enables agent coordination  
+- Each agent specializes in specific tasks
+- Shared context enables agent coordination
 - Modular architecture for easy extension  
 
 ## Limitations
@@ -166,7 +173,7 @@ This will:
 - **MCP connection failures** → Ensure Node.js is installed, MCP servers install automatically via `npx`  
 
 ## Future Enhancements
-- Clean up 
+- Clean up + Generalization 
 - Pull the code repo directly from Azure DevOps 
 - Move agent interactions creation into docker
 - Implement test driven development as an option

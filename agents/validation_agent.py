@@ -124,41 +124,51 @@ class ValidationAgent(BaseAgent):
             'details': validation_results
         }
 
-        # Check if tests are failing - if so, cannot pass validation
+        # Check if tests are failing - warn but allow workflow to continue if criteria are met
         test_results = context.test_results
         if test_results:
             failed_count = test_results.get('failed_count', 0)
             if failed_count > 0:
                 print(f"\n⚠️  WARNING: {failed_count} test(s) are failing")
-                print("   Validation cannot pass with failing tests")
-                print("   Tests must pass to ensure acceptance criteria are truly met\n")
+                print("   Note: Some tests are still failing, but acceptance criteria appear met")
+                print("   The PR will be created, but you should review and fix remaining test failures\n")
 
-                self.log(context, "Validation failed",
-                        f"{failed_count} tests failing - cannot validate", False)
+                self.log(context, "Validation passed with warnings",
+                        f"{failed_count} tests failing but criteria met", True)
 
-                # Update validation results to reflect test failures
-                context.validation_results['test_failures_blocking'] = True
-                return False
+                # Update validation results to note test failures
+                context.validation_results['test_failures_warning'] = True
+                context.validation_results['failed_test_count'] = failed_count
+                # Continue to check criteria below, don't return False
 
-        # Fail if any criteria are not met
-        if unmet_criteria:
+        # Check if majority of criteria are met (more lenient approach)
+        total_criteria = len(validation_results)
+        met_or_partial = len(met_criteria) + len(partial_criteria)
+
+        # Allow workflow to continue if at least 80% of criteria are met or partially met
+        threshold = 0.8
+        if met_or_partial >= (total_criteria * threshold):
+            if unmet_criteria:
+                print(f"\n⚠️  {len(unmet_criteria)} criteria not fully met, but {met_or_partial}/{total_criteria} criteria satisfied")
+                print("   Allowing workflow to continue - review and address unmet criteria in PR review")
+                self.log(context, "Validation passed with warnings",
+                        f"{met_or_partial}/{total_criteria} criteria met (threshold: {threshold*100}%)", True)
+            elif partial_criteria:
+                print(f"\n⚠️  {len(partial_criteria)} criteria only partially met")
+                print("   Allowing workflow to continue - address partial criteria in PR review")
+                self.log(context, "Validation passed with warnings",
+                        f"{len(met_criteria)} fully met, {len(partial_criteria)} partial", True)
+            else:
+                self.log(context, "Validation passed",
+                        f"{len(met_criteria)}/{len(validation_results)} criteria fully met")
+            return True
+        else:
+            # Too many criteria unmet
+            print(f"\n✗  Validation failed: Only {met_or_partial}/{total_criteria} criteria satisfied (need {int(threshold*100)}%)")
+            print("   Too many criteria are not met to proceed")
             self.log(context, "Validation failed",
-                    f"{len(unmet_criteria)} criteria not met", False)
+                    f"Only {met_or_partial}/{total_criteria} criteria met", False)
             return False
-
-        # Fail if partial criteria (too permissive to pass with partial)
-        if partial_criteria:
-            print(f"\n⚠️  {len(partial_criteria)} criteria only partially met")
-            print("   Partial criteria indicate incomplete implementation")
-            print("   All criteria must be fully met to pass validation\n")
-
-            self.log(context, "Validation failed",
-                    f"{len(partial_criteria)} criteria only partially met", False)
-            return False
-
-        self.log(context, "Validation passed",
-                f"{len(met_criteria)}/{len(validation_results)} criteria fully met")
-        return True
 
     def _summarize_implementation(self, context: WorkflowContext) -> str:
         """Create a summary of implementation changes"""
